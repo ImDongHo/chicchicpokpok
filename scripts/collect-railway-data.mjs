@@ -14,8 +14,9 @@ const colors = [
   '#ba7974',
   '#76894a',
 ]
+class CollectionError extends Error {}
 const fail = (message) => {
-  throw new Error(message)
+  throw new CollectionError(message)
 }
 
 export function validateDate(value) {
@@ -352,7 +353,14 @@ if (
   import.meta.url === pathToFileURL(resolve(process.argv[1])).href
 ) {
   main().catch((error) => {
-    console.error(error.message)
+    const message = error instanceof CollectionError
+      ? error.message
+      : 'Unexpected collection failure; check the response schema and output directories. Credentials are omitted.'
+    console.error(message)
+    if (process.env.GITHUB_ACTIONS === 'true') {
+      const annotation = message.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A')
+      console.error(`::error title=Railway data collection::${annotation}`)
+    }
     process.exitCode = 1
   })
 }
