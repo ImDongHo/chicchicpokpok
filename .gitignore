@@ -1,4 +1,8 @@
 # Logs
+# API snapshots are generated in Actions and copied into the deployment artifact.
+/src/data/generated/
+/public/data/railway/
+
 logs
 *.log
 npm-debug.log*
