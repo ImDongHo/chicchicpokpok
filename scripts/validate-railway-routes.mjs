@@ -90,18 +90,43 @@ async function main() {
       })
       continue
     }
-    const options = findJourneys(index, first.stationId, last.stationId, {
-      date,
-      earliestTime: hourOf(departure),
-      maxTransfers: 0,
-      limit: 50,
-    })
-    assert.ok(
-      options.some((option) => option.legs[0].tripId === trip.id),
-      `Train ${trip.trainNumber} missing from direct-service lookup`,
-    )
-    for (const option of options)
-      validateJourney(option, first.stationId, last.stationId)
+    // Round trips need two distinct-station queries to cover the entire record.
+    const sections = [[first, last]]
+    if (first.stationId === last.stationId) {
+      const middle = trip.stops
+        .slice(1, -1)
+        .findLast(
+          (stop) =>
+            stop.stationId !== first.stationId &&
+            parseKoreaTime(stop.arrival) !== null &&
+            parseKoreaTime(stop.departure) !== null,
+        )
+      assert.ok(
+        middle,
+        `Train ${trip.trainNumber} has no verifiable distinct-station section`,
+      )
+      sections.splice(0, 1, [first, middle], [middle, last])
+    }
+    for (const [from, to] of sections) {
+      const begins = parseKoreaTime(from.departure)
+      const options = findJourneys(index, from.stationId, to.stationId, {
+        date: dayOf(begins),
+        earliestTime: hourOf(begins),
+        maxTransfers: 0,
+        limit: 50,
+      })
+      assert.ok(
+        options.some(
+          (option) =>
+            option.legs[0].tripId === trip.id &&
+            option.legs[0].stops[0].sequence === from.sequence &&
+            option.legs[0].stops.at(-1).sequence === to.sequence,
+        ),
+        `Train ${trip.trainNumber} missing from direct-service lookup (${from.name} -> ${to.name})`,
+      )
+      for (const option of options)
+        validateJourney(option, from.stationId, to.stationId)
+    }
     testedServices++
   }
   assert.ok(testedServices > 0)

@@ -279,3 +279,19 @@ test('wrong data dates and invalid stop sequences fail instead of falling back t
     /정차 순서/,
   )
 })
+
+test('circular services keep both distinct-station sections and repeated intermediate stops', () => {
+  const record = trip('circle', [
+    ['홍성', '08:00'],
+    ['합덕', '08:30'],
+    ['안중', '09:00'],
+    ['합덕', '09:30'],
+    ['홍성', '10:00'],
+  ])
+  const index = createTimetableIndex([record])
+  const outbound = findJourneys(index, '홍성', '안중', { date })
+  const inbound = findJourneys(index, '안중', '홍성', { date })
+  assert.deepEqual(outbound[0].legs[0].stops, record.stops.slice(0, 3))
+  assert.deepEqual(inbound[0].legs[0].stops, record.stops.slice(2))
+  assert.deepEqual(findJourneys(index, '홍성', '홍성', { date }), [])
+})
