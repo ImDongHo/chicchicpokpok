@@ -518,6 +518,12 @@ export default function App() {
                       {dataDate.slice(0, 4)}.{dataDate.slice(4, 6)}.
                       {dataDate.slice(6, 8)} 운행 기록 기준 · 직통 우선
                     </p>
+                    {!!timetable?.excludedTripCount && (
+                      <p className="timetable-date">
+                        시각을 검증할 수 없는 {timetable.excludedTripCount}편은
+                        검색에서 제외했습니다.
+                      </p>
+                    )}
                     <div className="route-time-fields">
                       <label>
                         출발 시각 이후

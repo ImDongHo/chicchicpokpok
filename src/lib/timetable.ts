@@ -49,17 +49,38 @@ export interface TimetableIndex {
   departures: Map<string, Boarding[]>
   stationNames: Map<string, string>
   tripCount: number
+  excludedTripCount: number
 }
 
 export function createTimetableIndex(trips: TrainTrip[]): TimetableIndex {
   const departures = new Map<string, Boarding[]>(),
     stationNames = new Map<string, string>()
+  let tripCount = 0
   for (const trip of trips) {
     const service: IndexedTrip = {
       trip,
       arrivals: trip.stops.map((stop) => parseKoreaTime(stop.arrival)),
       departures: trip.stops.map((stop) => parseKoreaTime(stop.departure)),
     }
+    let previousTime = -Infinity
+    let verified =
+      service.departures[0] !== null && service.arrivals.at(-1) !== null
+    for (let i = 0; i < trip.stops.length; i++) {
+      const stop = trip.stops[i]
+      stationNames.set(stop.stationId, stop.name)
+      for (const [source, time] of [
+        [stop.arrival, service.arrivals[i]],
+        [stop.departure, service.departures[i]],
+      ] as const) {
+        if (source !== null && time === null) verified = false
+        if (time !== null) {
+          if (time < previousTime) verified = false
+          previousTime = time
+        }
+      }
+    }
+    if (!verified) continue
+    tripCount++
     for (let position = 0; position < trip.stops.length; position++) {
       const stop = trip.stops[position]
       stationNames.set(stop.stationId, stop.name)
@@ -80,7 +101,12 @@ export function createTimetableIndex(trips: TrainTrip[]): TimetableIndex {
         a.departure - b.departure ||
         a.service.trip.id.localeCompare(b.service.trip.id),
     )
-  return { departures, stationNames, tripCount: trips.length }
+  return {
+    departures,
+    stationNames,
+    tripCount,
+    excludedTripCount: trips.length - tripCount,
+  }
 }
 
 interface LegRef {

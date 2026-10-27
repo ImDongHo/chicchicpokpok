@@ -213,6 +213,8 @@ test('overnight transfers use explicit Korean dates rather than clock-only compa
 
 test('bad calendar dates and backwards train times are not turned into valid journeys', () => {
   assert.equal(parseKoreaTime('2026-02-30 08:00:00'), null)
+  assert.equal(parseKoreaTime('2026-10-26 24:00:00'), null)
+  assert.equal(parseKoreaTime('2026-10-26 12:60:00'), null)
   assert.equal(
     new Date(parseKoreaTime('2026-10-26 08:00:00.0')!).toISOString(),
     '2026-10-25T23:00:00.000Z',
@@ -225,6 +227,14 @@ test('bad calendar dates and backwards train times are not turned into valid jou
   assert.deepEqual(
     findJourneys(createTimetableIndex([bad]), 'a', 'b', { date }),
     [],
+  )
+  const index = createTimetableIndex([bad])
+  assert.equal(index.excludedTripCount, 1)
+  assert.equal(index.tripCount, 0)
+  assert.deepEqual(
+    findJourneys(index, 'x', 'b', { date }),
+    [],
+    'A later section of an inconsistent service must not be recommended',
   )
 })
 
