@@ -8,7 +8,7 @@ import {
 interface Dataset {
   stations: Station[]
   lines: RailLine[]
-  metadata: { kind: 'collected'; dataDate: string }
+  metadata: { kind: 'collected'; dataDate: string; scheduleFile?: string }
 }
 const generated = import.meta.glob<Dataset>('./generated/railway.json', {
   eager: true,
@@ -16,6 +16,8 @@ const generated = import.meta.glob<Dataset>('./generated/railway.json', {
 })
 const dataset = generated['./generated/railway.json']
 export const isSampleData = !dataset
+export const dataDate = dataset?.metadata.dataDate ?? ''
+export const scheduleFile = dataset?.metadata.scheduleFile ?? null
 export const datasetLabel = dataset
   ? `${dataset.metadata.dataDate.slice(0, 4)}.${dataset.metadata.dataDate.slice(4, 6)}.${dataset.metadata.dataDate.slice(6, 8)} 수집 철도망`
   : '샘플 철도망'

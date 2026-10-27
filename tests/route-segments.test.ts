@@ -1,6 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildConnectionSegments } from '../src/lib/route-segments.ts'
+import {
+  buildConnectionSegments,
+  buildJourneySegments,
+  mappedPaths,
+} from '../src/lib/route-segments.ts'
+import { createTimetableIndex, findJourneys } from '../src/lib/timetable.ts'
 import type { RailLine } from '../src/types.ts'
 
 const line = (
@@ -102,4 +107,73 @@ test('empty or single-station connections draw no route segments', () => {
   assert.deepEqual(buildConnectionSegments([], null), [])
   assert.deepEqual(buildConnectionSegments([], []), [])
   assert.deepEqual(buildConnectionSegments([], ['a']), [])
+})
+
+test('unknown coordinates split only map geometry and never bridge missing stops', () => {
+  assert.deepEqual(
+    mappedPaths(['a', 'b', 'unknown', 'c', 'd'], new Set(['a', 'b', 'c', 'd'])),
+    [
+      ['a', 'b'],
+      ['c', 'd'],
+    ],
+  )
+  assert.deepEqual(mappedPaths(['a', 'unknown', 'b'], new Set(['a', 'b'])), [])
+})
+
+test('verified service legs retain train numbers and distinct colors with the actual transfer wait', () => {
+  const trips = [
+    {
+      id: 'one',
+      date: '20261026',
+      trainNumber: '001',
+      trainType: 'KTX',
+      stops: [
+        {
+          stationId: 'a',
+          name: 'a',
+          sequence: 1,
+          arrival: null,
+          departure: '2026-10-26 08:00:00',
+        },
+        {
+          stationId: 'x',
+          name: 'x',
+          sequence: 2,
+          arrival: '2026-10-26 09:00:00',
+          departure: null,
+        },
+      ],
+    },
+    {
+      id: 'two',
+      date: '20261026',
+      trainNumber: '002',
+      trainType: null,
+      stops: [
+        {
+          stationId: 'x',
+          name: 'x',
+          sequence: 1,
+          arrival: null,
+          departure: '2026-10-26 09:20:00',
+        },
+        {
+          stationId: 'b',
+          name: 'b',
+          sequence: 2,
+          arrival: '2026-10-26 10:00:00',
+          departure: null,
+        },
+      ],
+    },
+  ]
+  const [journey] = findJourneys(createTimetableIndex(trips), 'a', 'b', {
+    date: '20261026',
+  })
+  const segments = buildJourneySegments(journey, '20261026')
+  assert.equal(segments[0].endIndex, segments[1].startIndex)
+  assert.notEqual(segments[0].color, segments[1].color)
+  assert.equal(segments[1].transferMinutes, 20)
+  assert.match(segments[0].label, /KTX 001호/)
+  assert.match(segments[1].label, /002호.*차종 미제공/)
 })

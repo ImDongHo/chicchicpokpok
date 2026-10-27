@@ -1,4 +1,5 @@
-import type { ConnectionSegment, RailLine } from '../types.ts'
+import type { ConnectionSegment, Journey, RailLine } from '../types.ts'
+import { formatKoreaTime } from './timetable.ts'
 
 const colors = [
   '#2563eb',
@@ -11,6 +12,51 @@ const colors = [
   '#475569',
 ]
 type Cost = [number, number, number]
+
+export function buildJourneySegments(
+  journey: Journey,
+  date: string,
+): ConnectionSegment[] {
+  let startIndex = 0
+  return journey.legs.map((leg, index) => {
+    const endIndex = startIndex + leg.stops.length - 1
+    const segment: ConnectionSegment = {
+      lineId: leg.tripId,
+      lineName: leg.trainType ?? '차종 미제공',
+      trainNumbers: [leg.trainNumber],
+      stationIds: leg.stops.map((stop) => stop.stationId),
+      startIndex,
+      endIndex,
+      directionConfirmed: true,
+      color: colors[index % colors.length],
+      label: `${index + 1}. ${leg.trainType ?? '열차'} ${leg.trainNumber}호 · ${formatKoreaTime(leg.departureAt, date)} → ${formatKoreaTime(leg.arrivalAt, date)}${leg.trainType ? '' : ' · 차종 미제공'}`,
+      ...(index
+        ? {
+            transferMinutes: Math.floor(
+              (leg.departureAt - journey.legs[index - 1].arrivalAt) / 60000,
+            ),
+          }
+        : {}),
+    }
+    startIndex = endIndex
+    return segment
+  })
+}
+
+// Split geometry at unknown locations rather than inventing station coordinates.
+export function mappedPaths(ids: string[], knownIds: Set<string>): string[][] {
+  const result: string[][] = []
+  let current: string[] = []
+  for (const id of ids) {
+    if (knownIds.has(id)) current.push(id)
+    else {
+      if (current.length > 1) result.push(current)
+      current = []
+    }
+  }
+  if (current.length > 1) result.push(current)
+  return result
+}
 interface Choice {
   line: RailLine | null
   end: number

@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "test": "node --test tests/*.test.ts",
     "data:collect": "node scripts/collect-railway-data.mjs",
+    "data:validate": "node scripts/validate-railway-routes.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

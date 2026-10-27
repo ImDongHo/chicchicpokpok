@@ -224,7 +224,7 @@ test('HTTP and network errors do not leak the service key or authenticated URL',
   )
 })
 
-test('only a complete, correctly ordered train joined to coordinates is published', () => {
+test('complete trains retain all stops even when station coordinates are unavailable', () => {
   const { dataset, trips } = transformData(
     stationRows,
     plans,
@@ -246,10 +246,23 @@ test('only a complete, correctly ordered train joined to coordinates is publishe
     () => transformData(stationRows, plans, [stops[0], stops[2]], date),
     /No complete trains/,
   )
-  assert.throws(
-    () => transformData(stationRows.slice(0, 2), plans, stops, date),
-    /No complete trains/,
+  const withUnknownLocation = transformData(
+    stationRows.slice(0, 2),
+    plans,
+    stops,
+    date,
   )
+  assert.equal(withUnknownLocation.trips.length, 1)
+  assert.deepEqual(
+    withUnknownLocation.trips[0].stops.map((stop) => stop.name),
+    ['서울', '대전', '부산'],
+  )
+  assert.equal(
+    withUnknownLocation.trips[0].stops.at(-1).stationId,
+    'unmapped:B',
+  )
+  assert.equal(withUnknownLocation.dataset.stations.length, 2)
+  assert.equal(withUnknownLocation.dataset.metadata.tripsWithUnmappedStops, 1)
   assert.throws(
     () => transformData(stationRows, plans, [...stops, stops[1]], date),
     /No complete trains/,
@@ -263,16 +276,19 @@ test('bad dates, changed schemas, and ambiguous station coordinates stop or excl
     () => transformData([{ name: '서울' }], plans, stops, date),
     /schema/,
   )
-  assert.throws(
-    () =>
-      transformData(
-        [...stationRows, { ...stationRows[0], 위도좌표: '36.0' }],
-        plans,
-        stops,
-        date,
-      ),
-    /No complete trains/,
+  const ambiguousLocation = transformData(
+    [...stationRows, { ...stationRows[0], 위도좌표: '36.0' }],
+    plans,
+    stops,
+    date,
   )
+  assert.equal(ambiguousLocation.dataset.metadata.ambiguousStationNames, 1)
+  assert.ok(
+    !ambiguousLocation.dataset.stations.some(
+      (station) => station.name === '서울',
+    ),
+  )
+  assert.equal(ambiguousLocation.trips[0].stops[0].stationId, 'unmapped:S')
   assert.throws(
     () => transformData(stationRows, plans, stops, '20261027'),
     /schema or date/,

@@ -798,9 +798,105 @@ button:focus:not(:focus-visible) {
   flex: 1;
   min-height: 0;
 }
+.sidebar.planning .sidebar-heading {
+  display: none;
+}
+.sidebar.planning .tabs {
+  margin-top: 24px;
+}
+@media (max-width: 760px) {
+  .sidebar.planning .tabs {
+    margin-top: 0;
+  }
+}
 .route-form {
   padding: 0 27px;
   flex-shrink: 0;
+}
+.timetable-date {
+  font-size: 10px;
+  color: #64775b;
+  line-height: 1.6;
+  margin: 10px 0;
+}
+.route-time-fields {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.route-time-fields label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 9px;
+}
+.route-time-fields input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  font-size: 12px;
+}
+.journey-summary {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+}
+.journey-summary strong {
+  font-size: 10px;
+  color: var(--green);
+  background: #edf3e5;
+  padding: 4px 7px;
+  border-radius: 5px;
+}
+.journey-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 10px;
+  color: #718367;
+  padding-bottom: 18px;
+}
+.journey-picker select {
+  max-width: 100%;
+  padding: 9px 7px;
+  font-size: 11px;
+  border: 1px solid #dce5d5;
+  color: #385533;
+  border-radius: 7px;
+  background: #f9fbf5;
+}
+.stop-times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  line-height: 1.5;
+}
+.connection-stops .unmapped-stop {
+  color: #937844;
+}
+.edit-journey-button {
+  display: none;
+}
+@media (max-width: 760px) {
+  .sidebar:not(.expanded) .route-panel.has-result .route-form {
+    display: none;
+  }
+  .edit-journey-button {
+    display: inline-flex;
+    margin-top: 10px;
+    font-size: 10px;
+    color: var(--green);
+    padding: 4px 0;
+  }
+  .route-time-fields label {
+    padding: 8px;
+  }
 }
 .route-form label {
   display: flex;

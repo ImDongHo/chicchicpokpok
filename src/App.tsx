@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Icon } from './components/Icon.tsx'
 import { RailMap } from './components/RailMap.tsx'
+import { JourneyResults } from './components/JourneyResults.tsx'
 import { StationDescription } from './components/StationDescription.tsx'
 import {
   lines,
+  dataDate,
+  scheduleFile,
   datasetLabel,
   isSampleData,
   regions,
@@ -13,7 +16,13 @@ import {
   stations,
 } from './data/railway.ts'
 import { findConnection, searchStations } from './lib/railway.ts'
-import { buildConnectionSegments } from './lib/route-segments.ts'
+import {
+  buildConnectionSegments,
+  buildJourneySegments,
+} from './lib/route-segments.ts'
+import { findJourneys, journeyStops } from './lib/timetable.ts'
+import type { TimetableIndex } from './lib/timetable.ts'
+import { loadTimetable } from './lib/load-timetable.ts'
 
 const initialDeparture =
   stations.find((station) => station.name === '서울')?.id ?? stations[0].id
@@ -45,9 +54,27 @@ export default function App() {
   const [onlyFavorites, setOnlyFavorites] = useState(false)
   const [departure, setDeparture] = useState(initialDeparture)
   const [arrival, setArrival] = useState(initialArrival)
-  const [request, setRequest] = useState<{ from: string; to: string } | null>(
-    null,
-  )
+  const [request, setRequest] = useState<{
+    from: string
+    to: string
+    earliestTime: string
+    minTransferMinutes: number
+  } | null>(null)
+  const [departureTime, setDepartureTime] = useState('00:00')
+  const [transferMinutes, setTransferMinutes] = useState(10)
+  const [timetable, setTimetable] = useState<TimetableIndex | null>(null)
+  const [loadState, setLoadState] = useState<
+    'idle' | 'loading' | 'ready' | 'error'
+  >('idle')
+  const [loadError, setLoadError] = useState('')
+  const [journeyChoice, setJourneyChoice] = useState(0)
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
   const [sheetExpanded, setSheetExpanded] = useState(false)
   const selectedStation = selected ? stationById.get(selected) : undefined
 
@@ -69,19 +96,94 @@ export default function App() {
   )
   const listKey = `${region}|${query}|${onlyFavorites}`
   const listLimit = listPage.key === listKey ? listPage.limit : 12
+  const journeys = useMemo(
+    () =>
+      !isSampleData && timetable && request
+        ? findJourneys(timetable, request.from, request.to, {
+            date: dataDate,
+            earliestTime: request.earliestTime,
+            minTransferMinutes: request.minTransferMinutes,
+          })
+        : [],
+    [timetable, request],
+  )
+  const selectedJourney = journeys[journeyChoice] ?? null
+  const selectedStops = useMemo(
+    () => (selectedJourney ? journeyStops(selectedJourney) : []),
+    [selectedJourney],
+  )
   const connection = useMemo(
-    () => (request ? findConnection(lines, request.from, request.to) : null),
-    [request],
+    () =>
+      isSampleData
+        ? request
+          ? findConnection(lines, request.from, request.to)
+          : null
+        : selectedJourney
+          ? selectedStops.map((stop) => stop.stationId)
+          : null,
+    [request, selectedJourney, selectedStops],
   )
   const connectionSegments = useMemo(
-    () => buildConnectionSegments(lines, connection),
-    [connection],
+    () =>
+      selectedJourney
+        ? buildJourneySegments(selectedJourney, dataDate)
+        : isSampleData
+          ? buildConnectionSegments(lines, connection)
+          : [],
+    [connection, selectedJourney],
   )
-  const mapCandidates = useMemo(() => {
-    return connection
-      ? connection.map((id) => stationById.get(id)!)
-      : filteredStations
-  }, [filteredStations, connection])
+  const routeStations = useMemo(
+    () =>
+      timetable
+        ? [...timetable.stationNames]
+            .map(([id, name]) => ({ id, name }))
+            .sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+        : stations,
+    [timetable],
+  )
+  const mapCandidates = useMemo(
+    () =>
+      connection
+        ? [
+            ...new Map(
+              connection.flatMap((id) => {
+                const station = stationById.get(id)
+                return station ? [[id, station] as const] : []
+              }),
+            ).values(),
+          ]
+        : filteredStations,
+    [filteredStations, connection],
+  )
+  async function ensureTimetable() {
+    if (isSampleData || timetable) return
+    setLoadState('loading')
+    setLoadError('')
+    try {
+      if (!scheduleFile)
+        throw new Error('연결된 운행 자료가 없습니다. 새로고침해 주세요.')
+      const index = await loadTimetable(
+        import.meta.env.BASE_URL + scheduleFile,
+        dataDate,
+      )
+      if (!mounted.current) return
+      setTimetable(index)
+      setLoadState('ready')
+    } catch (error) {
+      if (!mounted.current) return
+      setLoadState('error')
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : '운행 자료를 불러오지 못했습니다.',
+      )
+    }
+  }
+  function openRoutes() {
+    setTab('route')
+    setSheetExpanded(true)
+    void ensureTimetable()
+  }
   const selectStation = useCallback((id: string) => setSelected(id), [])
   const toggleFavorite = (id: string) =>
     setFavorites((values) =>
@@ -94,8 +196,7 @@ export default function App() {
     if (endpoint === 'departure') setDeparture(selected)
     else setArrival(selected)
     setRequest(null)
-    setTab('route')
-    setSheetExpanded(true)
+    openRoutes()
   }
 
   return (
@@ -114,13 +215,7 @@ export default function App() {
           </span>
         </a>
         <p className="topbar-copy">익숙한 일상 밖, 새로운 정거장으로.</p>
-        <button
-          className="header-action"
-          onClick={() => {
-            setTab('route')
-            setSheetExpanded(true)
-          }}
-        >
+        <button className="header-action" onClick={openRoutes}>
           <Icon name="route" size={18} />
           <span>경로 탐색</span>
           <Icon name="arrow" size={16} />
@@ -129,7 +224,7 @@ export default function App() {
 
       <main className="workspace">
         <aside
-          className={`sidebar ${sheetExpanded ? 'expanded' : ''}`}
+          className={`sidebar ${sheetExpanded ? 'expanded' : ''} ${tab === 'route' ? 'planning' : ''}`}
           aria-label="기차역 검색과 경로 탐색"
         >
           <button
@@ -174,7 +269,7 @@ export default function App() {
               aria-selected={tab === 'route'}
               aria-controls="route-panel"
               className={tab === 'route' ? 'active' : ''}
-              onClick={() => setTab('route')}
+              onClick={openRoutes}
             >
               <Icon name="route" size={17} />
               연결 경로
@@ -342,7 +437,7 @@ export default function App() {
             </section>
           ) : (
             <section
-              className="route-panel"
+              className={`route-panel ${selectedJourney ? 'has-result' : ''}`}
               id="route-panel"
               role="tabpanel"
               aria-labelledby="route-tab"
@@ -351,8 +446,15 @@ export default function App() {
                 className="route-form"
                 onSubmit={(event) => {
                   event.preventDefault()
-                  setRequest({ from: departure, to: arrival })
-                  setSelected(arrival)
+                  setJourneyChoice(0)
+                  setSheetExpanded(false)
+                  setRequest({
+                    from: departure,
+                    to: arrival,
+                    earliestTime: departureTime,
+                    minTransferMinutes: transferMinutes,
+                  })
+                  setSelected(stationById.has(arrival) ? arrival : null)
                 }}
               >
                 <label>
@@ -368,7 +470,7 @@ export default function App() {
                       setRequest(null)
                     }}
                   >
-                    {stations.map((station) => (
+                    {routeStations.map((station) => (
                       <option key={station.id} value={station.id}>
                         {station.name}역
                       </option>
@@ -403,17 +505,58 @@ export default function App() {
                       setRequest(null)
                     }}
                   >
-                    {stations.map((station) => (
+                    {routeStations.map((station) => (
                       <option key={station.id} value={station.id}>
                         {station.name}역
                       </option>
                     ))}
                   </select>
                 </label>
+                {!isSampleData && (
+                  <>
+                    <p className="timetable-date">
+                      {dataDate.slice(0, 4)}.{dataDate.slice(4, 6)}.
+                      {dataDate.slice(6, 8)} 운행 기록 기준 · 직통 우선
+                    </p>
+                    <div className="route-time-fields">
+                      <label>
+                        출발 시각 이후
+                        <input
+                          type="time"
+                          aria-label="출발 시각 이후"
+                          value={departureTime}
+                          onChange={(event) => {
+                            setDepartureTime(event.target.value)
+                            setRequest(null)
+                          }}
+                          required
+                        />
+                      </label>
+                      <label>
+                        최소 환승 여유
+                        <select
+                          aria-label="최소 환승 여유"
+                          value={transferMinutes}
+                          onChange={(event) => {
+                            setTransferMinutes(Number(event.target.value))
+                            setRequest(null)
+                          }}
+                        >
+                          <option value={10}>10분</option>
+                          <option value={20}>20분</option>
+                          <option value={30}>30분</option>
+                        </select>
+                      </label>
+                    </div>
+                  </>
+                )}
                 <button
                   className="primary-button"
                   type="submit"
-                  disabled={departure === arrival}
+                  disabled={
+                    departure === arrival ||
+                    (!isSampleData && loadState !== 'ready')
+                  }
                 >
                   연결 경로 보기
                   <Icon name="arrow" size={18} />
@@ -425,7 +568,20 @@ export default function App() {
                 )}
               </form>
               <div className="route-results" aria-live="polite">
-                {request && connection ? (
+                {!isSampleData ? (
+                  <JourneyResults
+                    loadState={loadState}
+                    error={loadError}
+                    onRetry={() => void ensureTimetable()}
+                    requested={!!request}
+                    options={journeys}
+                    selectedIndex={journeyChoice}
+                    onChoose={setJourneyChoice}
+                    segments={connectionSegments}
+                    date={dataDate}
+                    onExpand={() => setSheetExpanded(true)}
+                  />
+                ) : request && connection ? (
                   <>
                     <div className="connection-heading">
                       <span className="eyebrow">YOUR NEXT JOURNEY</span>
@@ -514,9 +670,9 @@ export default function App() {
               <p className="route-note">
                 <Icon name="info" size={16} />
                 <span>
-                  색상은 연결된 열차 경로 후보를 구분합니다. 경로 전환 지점의
-                  실제 환승 가능 여부·대기시간과 직통 운행은 시간표에서 확인해야
-                  합니다.
+                  {isSampleData
+                    ? '샘플 철도망입니다. 실제 탑승 열차나 환승 시간표가 아닙니다.'
+                    : '표시된 날짜의 운행 기록입니다. 좌표가 없는 정차역도 목록에 보존하며 지도에서는 일부 선이 생략됩니다. 좌석·운행 변경·실제 환승 가능 여부는 코레일에서 확인해 주세요.'}
                 </span>
               </p>
             </section>

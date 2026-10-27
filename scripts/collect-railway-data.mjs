@@ -230,6 +230,8 @@ export function transformData(stationRows, planRows, stopRows, date) {
     lineSignatures = new Map()
   let rejectedTrips = 0
   const excludedTrains = []
+  const unmappedTrains = []
+  let tripsWithUnmappedStops = 0
   for (const [id, rows] of groups) {
     const sorted = [...rows].sort(
       (a, b) => Number(a.trn_run_sn) - Number(b.trn_run_sn),
@@ -245,11 +247,7 @@ export function transformData(stationRows, planRows, stopRows, date) {
     const boarding = sorted.filter((row) =>
       ['시발', '종착', '여객승하차'].includes(row.stop_se_nm),
     )
-    if (
-      !full ||
-      boarding.length < 2 ||
-      boarding.some((row) => !stationMap.has(normalize(row.stn_nm)))
-    ) {
+    if (!full || boarding.length < 2) {
       rejectedTrips++
       excludedTrains.push({
         trainNumber: String(rows[0].trn_no),
@@ -270,14 +268,43 @@ export function transformData(stationRows, planRows, stopRows, date) {
       })
       continue
     }
+    const missingStationNames = [
+      ...new Set(
+        boarding
+          .filter((row) => !stationMap.has(normalize(row.stn_nm)))
+          .map((row) => row.stn_nm),
+      ),
+    ]
+    if (missingStationNames.length) {
+      tripsWithUnmappedStops++
+      unmappedTrains.push({
+        trainNumber: String(plan.trn_no),
+        missingStationNames,
+      })
+    }
     const stops = boarding.map((row) => ({
-      stationId: stationMap.get(normalize(row.stn_nm)).id,
+      stationId:
+        stationMap.get(normalize(row.stn_nm))?.id ?? `unmapped:${row.stn_cd}`,
+      name:
+        stationMap.get(normalize(row.stn_nm))?.name ??
+        String(row.stn_nm).trim().replace(/역$/, ''),
+      stationCode: String(row.stn_cd),
       sequence: Number(row.trn_run_sn),
       arrival: row.trn_arvl_dt ?? null,
       departure: row.trn_dptre_dt ?? null,
     }))
-    trips.push({ id, date, trainNumber: String(plan.trn_no), stops })
-    const ids = stops.map((stop) => stop.stationId)
+    const trainType =
+      plan.trn_clsf_nm ??
+      plan.trn_kind_nm ??
+      plan.trn_type_nm ??
+      sorted[0].trn_clsf_nm ??
+      sorted[0].trn_kind_nm ??
+      null
+    trips.push({ id, date, trainNumber: String(plan.trn_no), trainType, stops })
+    const ids = stops
+      .filter((stop) => !stop.stationId.startsWith('unmapped:'))
+      .map((stop) => stop.stationId)
+    if (ids.length < 2) continue
     const name = String(sorted[0].mrnt_nm ?? '철도 연결')
     const signature = `${name}:${ids.join('|')}`
     const existingLine = lineSignatures.get(signature)
@@ -304,7 +331,7 @@ export function transformData(stationRows, planRows, stopRows, date) {
   }
   if (!stationMap.size || !trips.length)
     fail(
-      'No complete trains could be joined to station coordinates. Inspect the public API schema, stop sequence and station names before publishing.',
+      'No complete trains or mapped stations are available. Inspect the public API schema, stop sequence and station names before publishing.',
     )
   const stations = [...stationMap.values()].sort((a, b) =>
     a.name.localeCompare(b.name, 'ko'),
@@ -320,6 +347,7 @@ export function transformData(stationRows, planRows, stopRows, date) {
     rejectedTrips,
     invalidCoordinates,
     ambiguousStationNames: ambiguous.size,
+    tripsWithUnmappedStops,
   }
   const coverage = {
     metadata,
@@ -334,6 +362,7 @@ export function transformData(stationRows, planRows, stopRows, date) {
       lng: row['경도좌표'],
     })),
     excludedTrains,
+    unmappedTrains,
   }
   return { dataset: { stations, lines, metadata }, trips, coverage }
 }
@@ -388,20 +417,45 @@ export async function main() {
   }
   // Probe the official timetable/classification source without exposing its key.
   try {
-    const url = new URL('https://apis.data.go.kr/1613000/TrainInfoService/getVhcleKndList')
+    const url = new URL(
+      'https://apis.data.go.kr/1613000/TrainInfoService/getVhcleKndList',
+    )
     url.searchParams.set('serviceKey', key)
     url.searchParams.set('_type', 'json')
-    const response = await fetch(url, { signal: AbortSignal.timeout(20000), redirect: 'error' })
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(20000),
+      redirect: 'error',
+    })
     const text = await response.text()
     let payload
-    try { payload = JSON.parse(text) } catch { payload = null }
-    const resultCode = payload?.response?.header?.resultCode ?? /<returnReasonCode>([^<]+)<\/returnReasonCode>/.exec(text)?.[1] ?? /<resultCode>([^<]+)<\/resultCode>/.exec(text)?.[1]
-    coverage.timetableSource = { httpStatus: response.status, resultCode: resultCode ? String(resultCode).slice(0,10) : null, available: response.ok && ['0','00'].includes(String(resultCode)) }
-    if (coverage.timetableSource.available) coverage.vehicleKinds = payload.response.body.items.item
+    try {
+      payload = JSON.parse(text)
+    } catch {
+      payload = null
+    }
+    const resultCode =
+      payload?.response?.header?.resultCode ??
+      /<returnReasonCode>([^<]+)<\/returnReasonCode>/.exec(text)?.[1] ??
+      /<resultCode>([^<]+)<\/resultCode>/.exec(text)?.[1]
+    coverage.timetableSource = {
+      httpStatus: response.status,
+      resultCode: resultCode ? String(resultCode).slice(0, 10) : null,
+      available: response.ok && ['0', '00'].includes(String(resultCode)),
+    }
+    if (coverage.timetableSource.available)
+      coverage.vehicleKinds = payload.response.body.items.item
   } catch {
-    coverage.timetableSource = { available: false, reason: 'Timetable source request unavailable; credentials omitted.' }
+    coverage.timetableSource = {
+      available: false,
+      reason: 'Timetable source request unavailable; credentials omitted.',
+    }
   }
   const root = fileURLToPath(new URL('../', import.meta.url))
+  const serviceHash = createHash('sha256')
+    .update(JSON.stringify(trips))
+    .digest('hex')
+    .slice(0, 16)
+  dataset.metadata.scheduleFile = `data/railway/services-${date}-${serviceHash}.json`
   await mkdir(resolve(root, 'src/data/generated'), { recursive: true })
   await mkdir(resolve(root, 'public/data/railway'), { recursive: true })
   await writeFile(
@@ -410,6 +464,10 @@ export async function main() {
   )
   await writeFile(
     resolve(root, 'public/data/railway/trips.json'),
+    JSON.stringify({ metadata: dataset.metadata, trips }),
+  )
+  await writeFile(
+    resolve(root, 'public', dataset.metadata.scheduleFile),
     JSON.stringify({ metadata: dataset.metadata, trips }),
   )
   await writeFile(

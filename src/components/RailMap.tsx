@@ -3,6 +3,7 @@ import { stationById } from '../data/railway.ts'
 import type { ConnectionSegment, Station } from '../types.ts'
 import { getMapStations } from '../lib/map-visibility.ts'
 import type { MapViewport } from '../lib/map-visibility.ts'
+import { mappedPaths } from '../lib/route-segments.ts'
 import { loadKakaoMaps } from '../kakao.ts'
 import type { KakaoMap, KakaoMaps, MapLayer } from '../kakao.ts'
 import { Icon } from './Icon.tsx'
@@ -17,6 +18,7 @@ interface Props {
 }
 
 const key = import.meta.env.VITE_KAKAO_MAP_APP_KEY?.trim() as string | undefined
+const knownStationIds = new Set(stationById.keys())
 const project = (lat: number, lng: number) => [
   (lng - 125.6) * 180,
   (38.4 - lat) * 180,
@@ -116,6 +118,20 @@ export function RailMap({
   )
   const [viewport, setViewport] = useState<MapViewport | null>(null)
   const [zoom, setZoom] = useState(1)
+  const geometry = useMemo(
+    () =>
+      segments.flatMap((segment, index) =>
+        mappedPaths(segment.stationIds, knownStationIds).map((ids, part) => ({
+          key: `${index}:${part}`,
+          ids,
+          color: segment.color,
+          label: segment.label,
+        })),
+      ),
+    [segments],
+  )
+  const unknownLocations =
+    connection?.filter((id) => !knownStationIds.has(id)).length ?? 0
   const routeColors = useMemo(() => {
     const colors = new Map<string, string>()
     for (const segment of segments)
@@ -280,12 +296,12 @@ export function RailMap({
   useEffect(() => {
     const map = mapRef.current,
       sdk = sdkRef.current
-    if (mode !== 'live' || !map || !sdk || !segments.length) return
-    const layers = segments.map(
+    if (mode !== 'live' || !map || !sdk || !geometry.length) return
+    const layers = geometry.map(
       (segment) =>
         new sdk.Polyline({
           map,
-          path: segment.stationIds.map((id) => {
+          path: segment.ids.map((id) => {
             const s = stationById.get(id)!
             return new sdk.LatLng(s.lat, s.lng)
           }),
@@ -297,15 +313,13 @@ export function RailMap({
     return () => {
       for (const layer of layers) layer.setMap(null)
     }
-  }, [mode, segments])
+  }, [mode, geometry])
 
   useEffect(() => {
     const map = mapRef.current,
       sdk = sdkRef.current
     if (mode !== 'live' || !map || !sdk) return
-    const targets = connection
-      ? connection.map((id) => stationById.get(id)!)
-      : scopeStations
+    const targets = scopeStations
     fitMap(map, sdk, targets, overview && !connection)
   }, [mode, scopeStations, connection, overview])
 
@@ -328,15 +342,7 @@ export function RailMap({
     setZoom(1)
     const map = mapRef.current,
       sdk = sdkRef.current
-    if (map && sdk)
-      fitMap(
-        map,
-        sdk,
-        connection
-          ? connection.map((id) => stationById.get(id)!)
-          : scopeStations,
-        overview && !connection,
-      )
+    if (map && sdk) fitMap(map, sdk, scopeStations, overview && !connection)
   }
 
   return (
@@ -418,10 +424,10 @@ export function RailMap({
                 동해
               </text>
             </g>
-            {segments.map((segment) => (
+            {geometry.map((segment) => (
               <polyline
-                key={`${segment.lineId}:${segment.startIndex}`}
-                points={segment.stationIds
+                key={segment.key}
+                points={segment.ids
                   .map((id) => {
                     const s = stationById.get(id)!
                     return project(s.lat, s.lng).join(',')
@@ -533,11 +539,13 @@ export function RailMap({
           </span>
         )}
       </div>
-      {mode !== 'live' && (
+      {(mode !== 'live' || unknownLocations > 0) && (
         <p className="map-caption">
-          {mode === 'error'
-            ? '실제 지도를 불러오지 못해 미리보기로 표시합니다.'
-            : '연결 관계를 단순화한 미리보기 지도'}
+          {unknownLocations
+            ? `위치 미확인 정차역 ${unknownLocations}개 · 목록에 모두 표시`
+            : mode === 'error'
+              ? '실제 지도를 불러오지 못해 미리보기로 표시합니다.'
+              : '연결 관계를 단순화한 미리보기 지도'}
         </p>
       )}
     </section>
