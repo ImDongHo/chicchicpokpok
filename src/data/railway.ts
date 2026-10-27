@@ -27,11 +27,15 @@ export const displayLines = [
 export const stationById = new Map(
   stations.map((station) => [station.id, station]),
 )
-export const stationLines = (id: string) => [
-  ...new Map(
-    lines
-      .filter((line) => line.stations.includes(id))
-      .map((line) => [line.name, line]),
-  ).values(),
-]
+const stationLineIndex = new Map<string, Map<string, RailLine>>()
+for (const line of lines) {
+  for (const id of line.stations) {
+    if (!stationLineIndex.has(id)) stationLineIndex.set(id, new Map())
+    stationLineIndex.get(id)!.set(line.name, line)
+  }
+}
+const stationLineLists = new Map(
+  [...stationLineIndex].map(([id, values]) => [id, [...values.values()]]),
+)
+export const stationLines = (id: string) => stationLineLists.get(id) ?? []
 export { regions }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Icon } from './components/Icon.tsx'
 import { RailMap } from './components/RailMap.tsx'
+import { StationDescription } from './components/StationDescription.tsx'
 import {
   lines,
   datasetLabel,
@@ -35,8 +36,9 @@ function readFavorites(): string[] {
 export default function App() {
   const [tab, setTab] = useState<'stations' | 'route'>('stations')
   const [query, setQuery] = useState('')
-  const [region, setRegion] = useState('전체')
-  const [selected, setSelected] = useState<string | null>(initialDeparture)
+  const [region, setRegion] = useState('서울')
+  const [selected, setSelected] = useState<string | null>(null)
+  const [listPage, setListPage] = useState({ key: '', limit: 12 })
   const [favorites, setFavorites] = useState(readFavorites)
   const [onlyFavorites, setOnlyFavorites] = useState(false)
   const [departure, setDeparture] = useState(initialDeparture)
@@ -55,21 +57,25 @@ export default function App() {
     }
   }, [favorites])
 
+  const favoriteFilter = onlyFavorites ? favorites : null
   const filteredStations = useMemo(
     () =>
       searchStations(stations, query, region).filter(
-        (station) => !onlyFavorites || favorites.includes(station.id),
+        (station) => !favoriteFilter || favoriteFilter.includes(station.id),
       ),
-    [query, region, onlyFavorites, favorites],
+    [query, region, favoriteFilter],
   )
-  const visibleIds = useMemo(
-    () => new Set(filteredStations.map((station) => station.id)),
-    [filteredStations],
-  )
+  const listKey = `${region}|${query}|${onlyFavorites}`
+  const listLimit = listPage.key === listKey ? listPage.limit : 12
   const connection = useMemo(
     () => (request ? findConnection(lines, request.from, request.to) : null),
     [request],
   )
+  const mapCandidates = useMemo(() => {
+    return connection
+      ? connection.map((id) => stationById.get(id)!)
+      : filteredStations
+  }, [filteredStations, connection])
   const selectStation = useCallback((id: string) => setSelected(id), [])
   const toggleFavorite = (id: string) =>
     setFavorites((values) =>
@@ -150,6 +156,7 @@ export default function App() {
               onClick={() => {
                 setTab('stations')
                 setRequest(null)
+                setSelected(null)
               }}
             >
               <Icon name="pin" size={17} />
@@ -181,12 +188,20 @@ export default function App() {
                   aria-label="기차역 또는 지역 검색"
                   placeholder="어떤 역으로 떠나고 싶으세요?"
                   value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  onChange={(event) => {
+                    if (!query.trim() && event.target.value.trim())
+                      setRegion('전체')
+                    setQuery(event.target.value)
+                    setSelected(null)
+                  }}
                 />
                 {query && (
                   <button
                     aria-label="검색어 지우기"
-                    onClick={() => setQuery('')}
+                    onClick={() => {
+                      setQuery('')
+                      setSelected(null)
+                    }}
                   >
                     <Icon name="close" size={16} />
                   </button>
@@ -198,7 +213,10 @@ export default function App() {
                     key={value}
                     aria-pressed={region === value}
                     className={region === value ? 'active' : ''}
-                    onClick={() => setRegion(value)}
+                    onClick={() => {
+                      setRegion(value)
+                      setSelected(null)
+                    }}
                   >
                     {value}
                   </button>
@@ -231,7 +249,7 @@ export default function App() {
                 aria-label="기차역 검색 결과"
                 aria-live="polite"
               >
-                {filteredStations.map((station) => (
+                {filteredStations.slice(0, listLimit).map((station) => (
                   <article
                     className={`station-card ${selected === station.id ? 'selected' : ''}`}
                     key={station.id}
@@ -276,6 +294,19 @@ export default function App() {
                     </button>
                   </article>
                 ))}
+                {filteredStations.length > listLimit && (
+                  <button
+                    className="load-more-stations"
+                    onClick={() =>
+                      setListPage({ key: listKey, limit: listLimit + 12 })
+                    }
+                  >
+                    기차역 더 보기{' '}
+                    <span>
+                      {listLimit} / {filteredStations.length}
+                    </span>
+                  </button>
+                )}
                 {!filteredStations.length && (
                   <div className="empty-state">
                     <Icon name={onlyFavorites ? 'star' : 'search'} size={32} />
@@ -465,7 +496,13 @@ export default function App() {
         <div className="map-area">
           <RailMap
             selected={selected}
-            visibleIds={visibleIds}
+            scopeStations={mapCandidates}
+            overview={
+              region === '전체' &&
+              !query.trim() &&
+              !onlyFavorites &&
+              !connection
+            }
             connection={connection}
             onSelect={selectStation}
           />
@@ -503,9 +540,10 @@ export default function App() {
                   <Icon name="star" size={20} />
                 </button>
               </div>
-              <p className="station-description">
-                {selectedStation.description}
-              </p>
+              <StationDescription
+                key={selectedStation.id}
+                text={selectedStation.description}
+              />
               <div className="selection-actions">
                 <button onClick={() => chooseEndpoint('departure')}>
                   출발역으로

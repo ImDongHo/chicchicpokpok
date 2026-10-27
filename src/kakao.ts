@@ -4,18 +4,27 @@ export interface Coordinate {
 }
 export interface Bounds {
   extend(point: Coordinate): void
+  getSouthWest(): Coordinate
+  getNorthEast(): Coordinate
 }
 export interface KakaoMap {
   panTo(point: Coordinate): void
   setBounds(bounds: Bounds): void
   getLevel(): number
+  getBounds(): Bounds
+  getCenter(): Coordinate
   setLevel(level: number): void
   relayout(): void
 }
 export interface MapLayer {
   setMap(map: KakaoMap | null): void
+  setZIndex?(index: number): void
 }
 export interface KakaoMaps {
+  event: {
+    addListener(map: KakaoMap, event: 'idle', callback: () => void): void
+    removeListener(map: KakaoMap, event: 'idle', callback: () => void): void
+  }
   load(callback: () => void): void
   LatLng: new (lat: number, lng: number) => Coordinate
   LatLngBounds: new () => Bounds

@@ -651,6 +651,10 @@ button:focus:not(:focus-visible) {
   white-space: nowrap;
 }
 .selected-station-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100% - 150px);
+  overflow: hidden;
   position: absolute;
   left: 27px;
   bottom: 110px;
@@ -714,11 +718,52 @@ button:focus:not(:focus-visible) {
   margin-left: auto;
 }
 .station-description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
   font-size: 10px;
   color: #8d9a82;
   margin-top: 14px;
   letter-spacing: -0.2px;
   line-height: 1.8;
+}
+.station-description.expanded {
+  display: block;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.station-description-wrap {
+  min-height: 0;
+  overflow-y: auto;
+}
+.selection-top,
+.selection-title,
+.selection-actions {
+  flex-shrink: 0;
+}
+.description-toggle {
+  color: var(--green);
+  font-size: 10px;
+  padding: 7px 0 0;
+}
+.load-more-stations {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--green);
+}
+.load-more-stations span {
+  color: var(--muted);
+  margin-left: 8px;
+}
+.station-copy > small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .selection-actions {
   display: flex;

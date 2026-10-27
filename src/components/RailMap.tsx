@@ -1,12 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
-import { stations, lines, stationById, displayLines } from '../data/railway.ts'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { stationById } from '../data/railway.ts'
+import type { Station } from '../types.ts'
+import { getMapStations } from '../lib/map-visibility.ts'
+import type { MapViewport } from '../lib/map-visibility.ts'
 import { loadKakaoMaps } from '../kakao.ts'
-import type { KakaoMap, KakaoMaps } from '../kakao.ts'
+import type { KakaoMap, KakaoMaps, MapLayer } from '../kakao.ts'
 import { Icon } from './Icon.tsx'
 
 interface Props {
   selected: string | null
-  visibleIds: Set<string>
+  scopeStations: Station[]
+  overview: boolean
   connection: string[] | null
   onSelect: (id: string) => void
 }
@@ -61,31 +65,120 @@ const labelled = new Set([
   '오송',
 ])
 
-export function RailMap({ selected, visibleIds, connection, onSelect }: Props) {
+const previewBounds: MapViewport = {
+  south: 33.7,
+  north: 38.5,
+  west: 125.4,
+  east: 130.8,
+  lat: 36.25,
+  lng: 127.8,
+  level: 12,
+}
+
+function fitMap(
+  map: KakaoMap,
+  sdk: KakaoMaps,
+  targets: Station[],
+  overview: boolean,
+) {
+  if (overview) {
+    map.setLevel(12)
+    map.panTo(new sdk.LatLng(36.25, 127.8))
+  } else if (targets.length === 1) {
+    map.setLevel(6)
+    map.panTo(new sdk.LatLng(targets[0].lat, targets[0].lng))
+  } else if (targets.length) {
+    const bounds = new sdk.LatLngBounds()
+    for (const station of targets)
+      bounds.extend(new sdk.LatLng(station.lat, station.lng))
+    map.setBounds(bounds)
+  }
+}
+
+export function RailMap({
+  selected,
+  scopeStations,
+  overview,
+  connection,
+  onSelect,
+}: Props) {
   const container = useRef<HTMLDivElement>(null)
   const mapRef = useRef<KakaoMap | null>(null)
   const sdkRef = useRef<KakaoMaps | null>(null)
+  const selectRef = useRef(onSelect)
+  const overlays = useRef(
+    new Map<string, { layer: MapLayer; button: HTMLButtonElement }>(),
+  )
   const [mode, setMode] = useState<'loading' | 'live' | 'preview' | 'error'>(
     key ? 'loading' : 'preview',
   )
+  const [viewport, setViewport] = useState<MapViewport | null>(null)
   const [zoom, setZoom] = useState(1)
+
+  useEffect(() => {
+    selectRef.current = onSelect
+  }, [onSelect])
 
   useEffect(() => {
     if (!key || !container.current) return
     let cancelled = false
     const element = container.current
     let resize: ResizeObserver | undefined
+    let disposeListener: (() => void) | undefined
+    let viewFrame = 0,
+      resizeFrame = 0
     loadKakaoMaps(key)
       .then((sdk) => {
         if (cancelled) return
         sdkRef.current = sdk
         const map = new sdk.Map(element, {
-          center: new sdk.LatLng(36.25, 127.8),
-          level: 12,
+          center: new sdk.LatLng(37.56, 126.98),
+          level: 7,
         })
         mapRef.current = map
-        resize = new ResizeObserver(() => map.relayout())
+        const updateViewport = () => {
+          cancelAnimationFrame(viewFrame)
+          viewFrame = requestAnimationFrame(() => {
+            if (cancelled) return
+            const bounds = map.getBounds(),
+              center = map.getCenter()
+            const southWest = bounds.getSouthWest(),
+              northEast = bounds.getNorthEast()
+            const next = {
+              south: southWest.getLat(),
+              north: northEast.getLat(),
+              west: southWest.getLng(),
+              east: northEast.getLng(),
+              lat: center.getLat(),
+              lng: center.getLng(),
+              level: map.getLevel(),
+            }
+            setViewport((previous) =>
+              previous &&
+              Object.keys(next).every(
+                (key) =>
+                  previous[key as keyof MapViewport] ===
+                  next[key as keyof MapViewport],
+              )
+                ? previous
+                : next,
+            )
+          })
+        }
+        sdk.event.addListener(map, 'idle', updateViewport)
+        disposeListener = () =>
+          sdk.event.removeListener(map, 'idle', updateViewport)
+        resize = new ResizeObserver(() => {
+          cancelAnimationFrame(resizeFrame)
+          resizeFrame = requestAnimationFrame(() => {
+            if (!cancelled) {
+              map.relayout()
+              updateViewport()
+            }
+          })
+        })
         resize.observe(element)
+        updateViewport()
         setMode('live')
       })
       .catch(() => {
@@ -93,79 +186,109 @@ export function RailMap({ selected, visibleIds, connection, onSelect }: Props) {
       })
     return () => {
       cancelled = true
+      cancelAnimationFrame(viewFrame)
+      cancelAnimationFrame(resizeFrame)
+      disposeListener?.()
       resize?.disconnect()
       mapRef.current = null
       element.replaceChildren()
     }
   }, [])
 
-  useEffect(() => {
-    const map = mapRef.current
-    const sdk = sdkRef.current
-    if (mode !== 'live' || !map || !sdk) return
-    const layers = lines.map(
-      (line) =>
-        new sdk.Polyline({
-          map,
-          path: line.stations.map((id) => {
-            const s = stationById.get(id)!
-            return new sdk.LatLng(s.lat, s.lng)
-          }),
-          strokeWeight: 4,
-          strokeColor: line.color,
-          strokeOpacity: connection ? 0.25 : 0.8,
-        }),
+  const mapStations = useMemo(() => {
+    const view =
+      mode === 'live'
+        ? viewport
+        : { ...previewBounds, level: zoom < 1.4 ? 12 : 8 }
+    if (!view) return []
+    const focused = [selected, connection?.[0], connection?.at(-1)].filter(
+      (id): id is string => !!id,
     )
-    if (connection)
-      layers.push(
-        new sdk.Polyline({
-          map,
-          path: connection.map((id) => {
-            const s = stationById.get(id)!
-            return new sdk.LatLng(s.lat, s.lng)
-          }),
-          strokeWeight: 6,
-          strokeColor: '#176957',
-          strokeOpacity: 1,
-        }),
-      )
-    for (const station of stations) {
+    return getMapStations(scopeStations, view, focused, overview)
+  }, [mode, viewport, zoom, scopeStations, selected, connection, overview])
+
+  // Reuse visible marker objects. Selection and pagination never rebuild the map.
+  useEffect(() => {
+    const map = mapRef.current,
+      sdk = sdkRef.current
+    if (mode !== 'live' || !map || !sdk) return
+    const wanted = new Set(mapStations.map((station) => station.id))
+    for (const [id, entry] of overlays.current) {
+      if (!wanted.has(id)) {
+        entry.layer.setMap(null)
+        overlays.current.delete(id)
+      }
+    }
+    for (const station of mapStations) {
+      if (overlays.current.has(station.id)) continue
       const button = document.createElement('button')
       button.type = 'button'
-      button.className = `live-station ${selected === station.id ? 'selected' : ''} ${visibleIds.has(station.id) ? '' : 'dim'}`
+      button.className = 'live-station'
       button.textContent = station.name
-      button.setAttribute('aria-label', `${station.name}역 선택`)
-      button.addEventListener('click', () => onSelect(station.id))
-      layers.push(
-        new sdk.CustomOverlay({
-          map,
-          position: new sdk.LatLng(station.lat, station.lng),
-          content: button,
-          yAnchor: 0.5,
-          zIndex: selected === station.id ? 10 : 1,
-        }),
-      )
+      button.setAttribute('aria-label', station.name + '역 선택')
+      button.addEventListener('click', () => selectRef.current(station.id))
+      const layer = new sdk.CustomOverlay({
+        map,
+        position: new sdk.LatLng(station.lat, station.lng),
+        content: button,
+        yAnchor: 0.5,
+        zIndex: 1,
+      })
+      overlays.current.set(station.id, { layer, button })
     }
+  }, [mode, mapStations])
+
+  useEffect(() => {
+    for (const [id, entry] of overlays.current) {
+      entry.button.classList.toggle('selected', id === selected)
+      entry.button.setAttribute('aria-pressed', String(id === selected))
+      entry.layer.setZIndex?.(id === selected ? 10 : 1)
+    }
+  }, [mode, selected, mapStations])
+
+  useEffect(() => {
+    const cache = overlays.current
     return () => {
-      for (const layer of layers) layer.setMap(null)
+      for (const entry of cache.values()) entry.layer.setMap(null)
+      cache.clear()
     }
-  }, [mode, selected, visibleIds, connection, onSelect])
+  }, [mode])
+
+  // Only a requested connection creates a polyline, independently of markers.
+  useEffect(() => {
+    const map = mapRef.current,
+      sdk = sdkRef.current
+    if (mode !== 'live' || !map || !sdk || !connection || connection.length < 2)
+      return
+    const layer = new sdk.Polyline({
+      map,
+      path: connection.map((id) => {
+        const s = stationById.get(id)!
+        return new sdk.LatLng(s.lat, s.lng)
+      }),
+      strokeWeight: 5,
+      strokeColor: '#176957',
+      strokeOpacity: 0.95,
+    })
+    return () => layer.setMap(null)
+  }, [mode, connection])
 
   useEffect(() => {
     const map = mapRef.current,
       sdk = sdkRef.current
-    if (!map || !sdk || mode !== 'live') return
-    if (connection && connection.length > 1) {
-      const bounds = new sdk.LatLngBounds()
-      for (const id of connection) {
-        const s = stationById.get(id)!
-        bounds.extend(new sdk.LatLng(s.lat, s.lng))
-      }
-      map.setBounds(bounds)
-    } else if (selected) {
-      const s = stationById.get(selected)!
-      map.panTo(new sdk.LatLng(s.lat, s.lng))
-    }
+    if (mode !== 'live' || !map || !sdk) return
+    const targets = connection
+      ? connection.map((id) => stationById.get(id)!)
+      : scopeStations
+    fitMap(map, sdk, targets, overview && !connection)
+  }, [mode, scopeStations, connection, overview])
+
+  useEffect(() => {
+    const map = mapRef.current,
+      sdk = sdkRef.current
+    if (mode !== 'live' || !map || !sdk || !selected || connection) return
+    const station = stationById.get(selected)!
+    map.panTo(new sdk.LatLng(station.lat, station.lng))
   }, [selected, connection, mode])
 
   const changeZoom = (delta: number) => {
@@ -179,10 +302,15 @@ export function RailMap({ selected, visibleIds, connection, onSelect }: Props) {
     setZoom(1)
     const map = mapRef.current,
       sdk = sdkRef.current
-    if (map && sdk) {
-      map.panTo(new sdk.LatLng(36.25, 127.8))
-      map.setLevel(12)
-    }
+    if (map && sdk)
+      fitMap(
+        map,
+        sdk,
+        connection
+          ? connection.map((id) => stationById.get(id)!)
+          : scopeStations,
+        overview && !connection,
+      )
   }
 
   return (
@@ -264,23 +392,6 @@ export function RailMap({ selected, visibleIds, connection, onSelect }: Props) {
                 동해
               </text>
             </g>
-            {lines.map((line) => (
-              <polyline
-                key={line.id}
-                points={line.stations
-                  .map((id) => {
-                    const s = stationById.get(id)!
-                    return project(s.lat, s.lng).join(',')
-                  })
-                  .join(' ')}
-                fill="none"
-                stroke={line.color}
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity={connection ? 0.2 : 0.8}
-              />
-            ))}
             {connection && (
               <polyline
                 points={connection
@@ -296,7 +407,7 @@ export function RailMap({ selected, visibleIds, connection, onSelect }: Props) {
                 strokeLinejoin="round"
               />
             )}
-            {stations.map((station) => {
+            {mapStations.map((station) => {
               const [x, y] = project(station.lat, station.lng)
               const active = station.id === selected
               const label = labelled.has(station.name) || active
@@ -304,7 +415,7 @@ export function RailMap({ selected, visibleIds, connection, onSelect }: Props) {
                 <g
                   key={station.id}
                   transform={`translate(${x} ${y})`}
-                  className={`map-station ${active ? 'selected' : ''} ${visibleIds.has(station.id) ? '' : 'dim'}`}
+                  className={`map-station ${active ? 'selected' : ''}`}
                   role="button"
                   tabIndex={0}
                   aria-label={`${station.name}역 선택`}
@@ -352,9 +463,7 @@ export function RailMap({ selected, visibleIds, connection, onSelect }: Props) {
               ? '지도 불러오는 중'
               : '철도망 미리보기'}
         </span>
-        <span className="map-count">
-          {stations.length}개 역 · {displayLines.length}개 방면
-        </span>
+        <span className="map-count">현재 {mapStations.length}개 역 표시</span>
       </div>
       <div className="map-controls">
         <button aria-label="지도 확대" onClick={() => changeZoom(1)}>
@@ -368,12 +477,18 @@ export function RailMap({ selected, visibleIds, connection, onSelect }: Props) {
         </button>
       </div>
       <div className="map-legend">
-        {displayLines.map((line) => (
-          <span key={line.id}>
-            <i style={{ background: line.color }} />
-            {line.name}
+        {connection ? (
+          <span>
+            <i style={{ background: '#176957' }} />
+            선택한 연결 경로 · {connection.length}개 역
           </span>
-        ))}
+        ) : (
+          <span>
+            {overview
+              ? '지도를 확대하거나 지역을 선택해 보세요'
+              : '역을 선택한 뒤 연결 경로를 살펴보세요'}
+          </span>
+        )}
       </div>
       {mode !== 'live' && (
         <p className="map-caption">
