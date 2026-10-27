@@ -386,6 +386,21 @@ export async function main() {
         ? error.message
         : 'Code metadata unavailable.'
   }
+  // Probe the official timetable/classification source without exposing its key.
+  try {
+    const url = new URL('https://apis.data.go.kr/1613000/TrainInfoService/getVhcleKndList')
+    url.searchParams.set('serviceKey', key)
+    url.searchParams.set('_type', 'json')
+    const response = await fetch(url, { signal: AbortSignal.timeout(20000), redirect: 'error' })
+    const text = await response.text()
+    let payload
+    try { payload = JSON.parse(text) } catch { payload = null }
+    const resultCode = payload?.response?.header?.resultCode ?? /<returnReasonCode>([^<]+)<\/returnReasonCode>/.exec(text)?.[1] ?? /<resultCode>([^<]+)<\/resultCode>/.exec(text)?.[1]
+    coverage.timetableSource = { httpStatus: response.status, resultCode: resultCode ? String(resultCode).slice(0,10) : null, available: response.ok && ['0','00'].includes(String(resultCode)) }
+    if (coverage.timetableSource.available) coverage.vehicleKinds = payload.response.body.items.item
+  } catch {
+    coverage.timetableSource = { available: false, reason: 'Timetable source request unavailable; credentials omitted.' }
+  }
   const root = fileURLToPath(new URL('../', import.meta.url))
   await mkdir(resolve(root, 'src/data/generated'), { recursive: true })
   await mkdir(resolve(root, 'public/data/railway'), { recursive: true })
