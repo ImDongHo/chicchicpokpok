@@ -77,6 +77,8 @@ export async function collectPages(endpoint, kind, key, date, fetcher = fetch) {
     url.searchParams.set(kind === 'station' ? 'perPage' : 'numOfRows', '1000')
     if (kind !== 'station') {
       url.searchParams.set('returnType', 'JSON')
+    }
+    if (kind === 'train') {
       url.searchParams.set('cond[run_ymd::GTE]', date)
       url.searchParams.set('cond[run_ymd::LTE]', date)
     }
@@ -227,6 +229,7 @@ export function transformData(stationRows, planRows, stopRows, date) {
     lines = [],
     lineSignatures = new Map()
   let rejectedTrips = 0
+  const excludedTrains = []
   for (const [id, rows] of groups) {
     const sorted = [...rows].sort(
       (a, b) => Number(a.trn_run_sn) - Number(b.trn_run_sn),
@@ -248,6 +251,23 @@ export function transformData(stationRows, planRows, stopRows, date) {
       boarding.some((row) => !stationMap.has(normalize(row.stn_nm)))
     ) {
       rejectedTrips++
+      excludedTrains.push({
+        trainNumber: String(rows[0].trn_no),
+        origin: plan?.dptre_stn_nm ?? sorted[0].stn_nm,
+        destination: plan?.arvl_stn_nm ?? sorted.at(-1).stn_nm,
+        reason: !full
+          ? 'incomplete-sequence-or-endpoints'
+          : boarding.length < 2
+            ? 'insufficient-passenger-stops'
+            : 'station-location-unmatched',
+        missingStationNames: [
+          ...new Set(
+            boarding
+              .filter((row) => !stationMap.has(normalize(row.stn_nm)))
+              .map((row) => row.stn_nm),
+          ),
+        ],
+      })
       continue
     }
     const stops = boarding.map((row) => ({
@@ -301,7 +321,21 @@ export function transformData(stationRows, planRows, stopRows, date) {
     invalidCoordinates,
     ambiguousStationNames: ambiguous.size,
   }
-  return { dataset: { stations, lines, metadata }, trips }
+  const coverage = {
+    metadata,
+    schema: {
+      station: Object.keys(stationRows[0] ?? {}),
+      plan: Object.keys(planRows[0] ?? {}),
+      stop: Object.keys(stopRows[0] ?? {}),
+    },
+    stationLocations: stationRows.map((row) => ({
+      name: row['역이름'],
+      lat: row['위도좌표'],
+      lng: row['경도좌표'],
+    })),
+    excludedTrains,
+  }
+  return { dataset: { stations, lines, metadata }, trips, coverage }
 }
 
 export async function main() {
@@ -331,12 +365,27 @@ export async function main() {
     key,
     date,
   )
-  const { dataset, trips } = transformData(
+  const { dataset, trips, coverage } = transformData(
     stationRows,
     planRows,
     stopRows,
     date,
   )
+  try {
+    const codes = await collectPages(`${runEndpoint}/codes2`, 'code', key, date)
+    const codeTypes = new Map()
+    for (const row of codes) {
+      const type = String(row.type ?? 'unknown')
+      if (!codeTypes.has(type)) codeTypes.set(type, [])
+      if (codeTypes.get(type).length < 8) codeTypes.get(type).push(row)
+    }
+    coverage.codeTypes = Object.fromEntries(codeTypes)
+  } catch (error) {
+    coverage.codeStatus =
+      error instanceof CollectionError
+        ? error.message
+        : 'Code metadata unavailable.'
+  }
   const root = fileURLToPath(new URL('../', import.meta.url))
   await mkdir(resolve(root, 'src/data/generated'), { recursive: true })
   await mkdir(resolve(root, 'public/data/railway'), { recursive: true })
@@ -347,6 +396,10 @@ export async function main() {
   await writeFile(
     resolve(root, 'public/data/railway/trips.json'),
     JSON.stringify({ metadata: dataset.metadata, trips }),
+  )
+  await writeFile(
+    resolve(root, 'public/data/railway/coverage.json'),
+    JSON.stringify(coverage),
   )
   console.log(
     `Collected ${date}: ${dataset.stations.length} mapped stations, ${trips.length} complete trains; ${dataset.metadata.rejectedTrips} trains excluded.`,
