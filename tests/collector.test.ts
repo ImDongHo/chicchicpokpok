@@ -65,6 +65,23 @@ const stops = [
   },
 ]
 
+test('collection retains every train number when services share the same station sequence', () => {
+  const morePlans = [...plans, { ...plans[0], trn_no: '00003' }]
+  const moreStops = [
+    ...stops,
+    ...stops.map((stop) => ({ ...stop, trn_no: '00003' })),
+  ]
+  const { dataset, trips } = transformData(
+    stationRows,
+    morePlans,
+    moreStops,
+    date,
+  )
+  assert.equal(trips.length, 2)
+  assert.equal(dataset.lines.length, 1)
+  assert.deepEqual(dataset.lines[0].trainNumbers, ['00001', '00003'])
+})
+
 test('API response adapters understand both documented envelopes and reject application errors', () => {
   assert.equal(
     unpackPage({ data: stationRows, totalCount: 3, page: 1 }, 'station').total,

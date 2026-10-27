@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { stationById } from '../data/railway.ts'
-import type { Station } from '../types.ts'
+import type { ConnectionSegment, Station } from '../types.ts'
 import { getMapStations } from '../lib/map-visibility.ts'
 import type { MapViewport } from '../lib/map-visibility.ts'
 import { loadKakaoMaps } from '../kakao.ts'
@@ -12,6 +12,7 @@ interface Props {
   scopeStations: Station[]
   overview: boolean
   connection: string[] | null
+  segments: ConnectionSegment[]
   onSelect: (id: string) => void
 }
 
@@ -100,6 +101,7 @@ export function RailMap({
   scopeStations,
   overview,
   connection,
+  segments,
   onSelect,
 }: Props) {
   const container = useRef<HTMLDivElement>(null)
@@ -114,6 +116,16 @@ export function RailMap({
   )
   const [viewport, setViewport] = useState<MapViewport | null>(null)
   const [zoom, setZoom] = useState(1)
+  const routeColors = useMemo(() => {
+    const colors = new Map<string, string>()
+    for (const segment of segments)
+      for (const id of segment.stationIds) colors.set(id, segment.color)
+    return colors
+  }, [segments])
+  const changeStations = useMemo(
+    () => new Set(segments.slice(1).map((segment) => segment.stationIds[0])),
+    [segments],
+  )
 
   useEffect(() => {
     selectRef.current = onSelect
@@ -242,9 +254,19 @@ export function RailMap({
     for (const [id, entry] of overlays.current) {
       entry.button.classList.toggle('selected', id === selected)
       entry.button.setAttribute('aria-pressed', String(id === selected))
+      entry.button.classList.toggle('route-change', changeStations.has(id))
+      const color = routeColors.get(id)
+      if (color) entry.button.style.setProperty('--route-color', color)
+      else entry.button.style.removeProperty('--route-color')
+      entry.button.setAttribute(
+        'title',
+        changeStations.has(id)
+          ? '열차 경로 전환 지점 · 실제 환승 가능 여부는 시간표 확인'
+          : '',
+      )
       entry.layer.setZIndex?.(id === selected ? 10 : 1)
     }
-  }, [mode, selected, mapStations])
+  }, [mode, selected, mapStations, routeColors, changeStations])
 
   useEffect(() => {
     const cache = overlays.current
@@ -254,24 +276,28 @@ export function RailMap({
     }
   }, [mode])
 
-  // Only a requested connection creates a polyline, independently of markers.
+  // Only requested train-path segments create polylines, independently of markers.
   useEffect(() => {
     const map = mapRef.current,
       sdk = sdkRef.current
-    if (mode !== 'live' || !map || !sdk || !connection || connection.length < 2)
-      return
-    const layer = new sdk.Polyline({
-      map,
-      path: connection.map((id) => {
-        const s = stationById.get(id)!
-        return new sdk.LatLng(s.lat, s.lng)
-      }),
-      strokeWeight: 5,
-      strokeColor: '#176957',
-      strokeOpacity: 0.95,
-    })
-    return () => layer.setMap(null)
-  }, [mode, connection])
+    if (mode !== 'live' || !map || !sdk || !segments.length) return
+    const layers = segments.map(
+      (segment) =>
+        new sdk.Polyline({
+          map,
+          path: segment.stationIds.map((id) => {
+            const s = stationById.get(id)!
+            return new sdk.LatLng(s.lat, s.lng)
+          }),
+          strokeWeight: 5,
+          strokeColor: segment.color,
+          strokeOpacity: 0.95,
+        }),
+    )
+    return () => {
+      for (const layer of layers) layer.setMap(null)
+    }
+  }, [mode, segments])
 
   useEffect(() => {
     const map = mapRef.current,
@@ -392,24 +418,28 @@ export function RailMap({
                 동해
               </text>
             </g>
-            {connection && (
+            {segments.map((segment) => (
               <polyline
-                points={connection
+                key={`${segment.lineId}:${segment.startIndex}`}
+                points={segment.stationIds
                   .map((id) => {
                     const s = stationById.get(id)!
                     return project(s.lat, s.lng).join(',')
                   })
                   .join(' ')}
                 fill="none"
-                stroke="#176957"
+                stroke={segment.color}
                 strokeWidth="6"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-              />
-            )}
+              >
+                <title>{segment.label}</title>
+              </polyline>
+            ))}
             {mapStations.map((station) => {
               const [x, y] = project(station.lat, station.lng)
               const active = station.id === selected
+              const routeColor = routeColors.get(station.id) ?? '#267a65'
               const label = labelled.has(station.name) || active
               return (
                 <g
@@ -430,13 +460,24 @@ export function RailMap({
                 >
                   <title>
                     {station.name}역 · {station.area}
+                    {changeStations.has(station.id)
+                      ? ' · 열차 경로 전환 지점'
+                      : ''}
                   </title>
                   <circle r="16" fill="transparent" />
+                  {changeStations.has(station.id) && (
+                    <circle
+                      r="10"
+                      fill="white"
+                      stroke={routeColor}
+                      strokeWidth="2"
+                    />
+                  )}
                   {active && <circle r="16" fill="#176957" opacity=".14" />}
                   <circle
                     r={active ? 7 : 4.5}
-                    fill={active ? '#176957' : '#fff'}
-                    stroke="#267a65"
+                    fill={active ? routeColor : '#fff'}
+                    stroke={routeColor}
                     strokeWidth="2.2"
                   />
                   {label && (
@@ -476,12 +517,14 @@ export function RailMap({
           <Icon name="focus" />
         </button>
       </div>
-      <div className="map-legend">
+      <div className="map-legend" aria-label="열차 경로 색상 범례">
         {connection ? (
-          <span>
-            <i style={{ background: '#176957' }} />
-            선택한 연결 경로 · {connection.length}개 역
-          </span>
+          segments.map((segment) => (
+            <span key={`${segment.lineId}:${segment.startIndex}`}>
+              <i style={{ background: segment.color }} />
+              {segment.label}
+            </span>
+          ))
         ) : (
           <span>
             {overview

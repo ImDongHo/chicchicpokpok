@@ -225,7 +225,7 @@ export function transformData(stationRows, planRows, stopRows, date) {
   }
   const trips = [],
     lines = [],
-    lineSignatures = new Set()
+    lineSignatures = new Map()
   let rejectedTrips = 0
   for (const [id, rows] of groups) {
     const sorted = [...rows].sort(
@@ -260,10 +260,12 @@ export function transformData(stationRows, planRows, stopRows, date) {
     const ids = stops.map((stop) => stop.stationId)
     const name = String(sorted[0].mrnt_nm ?? '철도 연결')
     const signature = `${name}:${ids.join('|')}`
-    if (!lineSignatures.has(signature)) {
-      lineSignatures.add(signature)
+    const existingLine = lineSignatures.get(signature)
+    if (existingLine) {
+      existingLine.trainNumbers.push(String(plan.trn_no))
+    } else {
       const hash = createHash('sha256').update(signature).digest('hex')
-      lines.push({
+      const line = {
         id: `route:${hash.slice(0, 16)}`,
         name,
         color:
@@ -274,7 +276,10 @@ export function transformData(stationRows, planRows, stopRows, date) {
             ) % colors.length
           ],
         stations: ids,
-      })
+        trainNumbers: [String(plan.trn_no)],
+      }
+      lines.push(line)
+      lineSignatures.set(signature, line)
     }
   }
   if (!stationMap.size || !trips.length)
@@ -353,12 +358,16 @@ if (
   import.meta.url === pathToFileURL(resolve(process.argv[1])).href
 ) {
   main().catch((error) => {
-    const message = error instanceof CollectionError
-      ? error.message
-      : 'Unexpected collection failure; check the response schema and output directories. Credentials are omitted.'
+    const message =
+      error instanceof CollectionError
+        ? error.message
+        : 'Unexpected collection failure; check the response schema and output directories. Credentials are omitted.'
     console.error(message)
     if (process.env.GITHUB_ACTIONS === 'true') {
-      const annotation = message.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A')
+      const annotation = message
+        .replaceAll('%', '%25')
+        .replaceAll('\r', '%0D')
+        .replaceAll('\n', '%0A')
       console.error(`::error title=Railway data collection::${annotation}`)
     }
     process.exitCode = 1

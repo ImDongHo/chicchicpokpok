@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { Icon } from './components/Icon.tsx'
 import { RailMap } from './components/RailMap.tsx'
 import { StationDescription } from './components/StationDescription.tsx'
@@ -12,6 +13,7 @@ import {
   stations,
 } from './data/railway.ts'
 import { findConnection, searchStations } from './lib/railway.ts'
+import { buildConnectionSegments } from './lib/route-segments.ts'
 
 const initialDeparture =
   stations.find((station) => station.name === '서울')?.id ?? stations[0].id
@@ -70,6 +72,10 @@ export default function App() {
   const connection = useMemo(
     () => (request ? findConnection(lines, request.from, request.to) : null),
     [request],
+  )
+  const connectionSegments = useMemo(
+    () => buildConnectionSegments(lines, connection),
+    [connection],
   )
   const mapCandidates = useMemo(() => {
     return connection
@@ -432,24 +438,57 @@ export default function App() {
                         {datasetLabel}에서 {connection.length}개 역을
                         연결했어요.
                       </p>
+                      <p>
+                        {connectionSegments.length}개 색상 구간 · 열차 경로 후보
+                      </p>
                     </div>
                     <ol className="connection-stops">
-                      {connection.map((id, index) => (
-                        <li key={id}>
-                          <span
-                            className={`stop-dot ${index === 0 || index === connection.length - 1 ? 'endpoint' : ''}`}
-                          />
-                          <div>
-                            <strong>{stationById.get(id)!.name}역</strong>
-                            <small>{stationById.get(id)!.area}</small>
-                          </div>
-                          {index === 0 ? (
-                            <span className="stop-label">출발</span>
-                          ) : index === connection.length - 1 ? (
-                            <span className="stop-label">도착</span>
-                          ) : null}
-                        </li>
-                      ))}
+                      {connection.map((id, index) => {
+                        const segment =
+                          connectionSegments.find(
+                            (segment) =>
+                              index >= segment.startIndex &&
+                              index < segment.endIndex,
+                          ) ?? connectionSegments.at(-1)
+                        const beginsSegment = segment?.startIndex === index
+                        const changesPath = index > 0 && beginsSegment
+                        return (
+                          <li
+                            key={id}
+                            className={changesPath ? 'route-change-stop' : ''}
+                            style={
+                              {
+                                '--route-color': segment?.color,
+                              } as CSSProperties
+                            }
+                          >
+                            <span
+                              className={`stop-dot ${index === 0 || index === connection.length - 1 ? 'endpoint' : ''}`}
+                            />
+                            <div>
+                              <strong>{stationById.get(id)!.name}역</strong>
+                              <small>{stationById.get(id)!.area}</small>
+                              {beginsSegment && (
+                                <small className="route-train-label">
+                                  {segment.label}
+                                </small>
+                              )}
+                            </div>
+                            {index === 0 ? (
+                              <span className="stop-label">출발</span>
+                            ) : changesPath ? (
+                              <span
+                                className="stop-label route-change-label"
+                                title="색상이 바뀌는 경로 전환 지점입니다. 실제 환승 가능 여부와 대기시간은 시간표를 확인하세요."
+                              >
+                                경로 전환
+                              </span>
+                            ) : index === connection.length - 1 ? (
+                              <span className="stop-label">도착</span>
+                            ) : null}
+                          </li>
+                        )
+                      })}
                     </ol>
                   </>
                 ) : request ? (
@@ -475,8 +514,9 @@ export default function App() {
               <p className="route-note">
                 <Icon name="info" size={16} />
                 <span>
-                  철도망의 연결 관계를 보여주는 미리보기입니다. 실제 정차역·직통
-                  운행·환승·소요 시간은 운행 시간표에서 확인해야 합니다.
+                  색상은 연결된 열차 경로 후보를 구분합니다. 경로 전환 지점의
+                  실제 환승 가능 여부·대기시간과 직통 운행은 시간표에서 확인해야
+                  합니다.
                 </span>
               </p>
             </section>
@@ -504,6 +544,7 @@ export default function App() {
               !connection
             }
             connection={connection}
+            segments={connectionSegments}
             onSelect={selectStation}
           />
           {selectedStation && (

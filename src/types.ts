@@ -13,4 +13,17 @@ export interface RailLine {
   name: string
   color: string
   stations: string[]
+  trainNumbers?: string[]
+}
+
+export interface ConnectionSegment {
+  lineId: string | null
+  lineName: string
+  trainNumbers: string[]
+  stationIds: string[]
+  startIndex: number
+  endIndex: number
+  directionConfirmed: boolean
+  color: string
+  label: string
 }

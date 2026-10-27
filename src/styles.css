@@ -962,7 +962,7 @@ button:focus:not(:focus-visible) {
 .connection-stops li:not(:last-child):after {
   content: '';
   width: 2px;
-  background: #dce7d0;
+  background: var(--route-color, #dce7d0);
   height: calc(100% - 12px);
   position: absolute;
   left: 13px;
@@ -972,16 +972,16 @@ button:focus:not(:focus-visible) {
   width: 12px;
   height: 12px;
   background: white;
-  border: 2px solid #b3c79a;
+  border: 2px solid var(--route-color, #b3c79a);
   border-radius: 50%;
   position: relative;
   z-index: 1;
   flex-shrink: 0;
 }
 .stop-dot.endpoint {
-  background: #377154;
-  border: 3px solid #d4e3c6;
-  box-shadow: 0 0 0 1px #8ca779;
+  background: var(--route-color, #377154);
+  border: 3px solid white;
+  box-shadow: 0 0 0 1px var(--route-color, #8ca779);
 }
 .connection-stops li > div {
   display: flex;
@@ -995,6 +995,21 @@ button:focus:not(:focus-visible) {
 .connection-stops small {
   font-size: 9px;
   color: #99a58c;
+}
+.connection-stops .route-train-label {
+  color: var(--route-color);
+  line-height: 1.6;
+  padding: 3px 0;
+}
+.route-change-stop .stop-dot {
+  box-shadow:
+    0 0 0 3px white,
+    0 0 0 4px var(--route-color);
+}
+.route-change-label {
+  color: var(--route-color);
+  background: #f4f5f1;
+  white-space: nowrap;
 }
 .stop-label {
   margin-left: auto;
@@ -1027,19 +1042,24 @@ button:focus:not(:focus-visible) {
   font:
     600 11px 'Noto Sans KR',
     sans-serif;
-  border: 1.5px solid #83a78e;
+  border: 1.5px solid var(--route-color, #83a78e);
   border-radius: 16px;
   background: #fffef9;
   padding: 5px 9px;
   box-shadow: 0 2px 5px #2e503516;
   cursor: pointer;
-  color: #477350;
+  color: var(--route-color, #477350);
 }
 .live-station.selected {
-  background: #176957;
+  background: var(--route-color, #176957);
   color: white;
   border-color: #fff;
   box-shadow: 0 2px 9px #17695745;
+}
+.live-station.route-change {
+  box-shadow:
+    0 0 0 2px white,
+    0 0 0 4px var(--route-color, #83a78e);
 }
 .live-station.dim {
   opacity: 0.35;
