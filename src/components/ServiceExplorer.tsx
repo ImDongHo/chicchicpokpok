@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Journey, Station } from '../types.ts'
 import type { TimetableIndex } from '../lib/timetable.ts'
 import {
@@ -13,7 +13,14 @@ import {
   scopedMapStations,
 } from '../lib/service-explorer.ts'
 import type { ServiceScope } from '../lib/service-explorer.ts'
-import { DEFAULT_TRAIN_FILTER } from '../lib/train-filter.ts'
+import {
+  initialExplorerNavigation,
+  navigationId,
+  readExplorerNavigation,
+  readAppNavigation,
+  writeAppNavigation,
+} from '../lib/app-navigation.ts'
+import type { ExplorerForm, ExplorerNavigation } from '../lib/app-navigation.ts'
 import { stationLabel } from '../lib/station-labels.ts'
 import { trainTypeLabel } from '../lib/train-labels.ts'
 import { buildJourneySegments } from '../lib/route-segments.ts'
@@ -56,21 +63,24 @@ export function ServiceExplorer({
   onInspect,
   onExpand,
 }: Props) {
-  const [form, setForm] = useState({
-    mode: 'station' as ServiceScope['mode'],
-    stationId: initialStation,
-    region:
-      stations.find((station) => station.id === initialStation)?.region ??
-      '서울',
-    query: '',
-    trainFilter: DEFAULT_TRAIN_FILTER,
-  })
-  const [page, setPage] = useState(0)
-  const [familyId, setFamilyId] = useState<string | null>(null)
-  const [routeId, setRouteId] = useState<string | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [navigation, setNavigation] = useState(
+    () =>
+      readExplorerNavigation(window.history.state, date) ??
+      initialExplorerNavigation(
+        date,
+        initialStation,
+        stations.find((station) => station.id === initialStation)?.region ??
+          '서울',
+      ),
+  )
+  const { form, page, familyId, routeId, selectedId } = navigation
   const panelRef = useRef<HTMLElement>(null),
     resultsRef = useRef<HTMLDivElement>(null)
+  const scopeRef = useRef<HTMLDetailsElement>(null),
+    advancedRef = useRef<HTMLDetailsElement>(null)
+  const pendingRestore = useRef<ExplorerNavigation | null>(navigation)
+  const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const traversing = useRef(false)
   const stationOptions = useMemo(
     () => explorerStations(index, stations),
     [index, stations],
@@ -122,27 +132,125 @@ export function ServiceExplorer({
       overview: !selected,
     })
   }, [selected, onPreview])
-  const scrollTop = () => panelRef.current?.scrollTo({ top: 0 })
-  const update = (patch: Partial<typeof form>) => {
-    setForm((previous) => ({ ...previous, ...patch }))
-    setFamilyId(null)
-    setRouteId(null)
-    setSelectedId(null)
-    setPage(0)
+  useEffect(() => {
+    const restore = (event: PopStateEvent) => {
+      traversing.current = false
+      if (readAppNavigation(event.state)?.tab !== 'network') return
+      const entry =
+        readExplorerNavigation(event.state, date) ??
+        initialExplorerNavigation(
+          date,
+          initialStation,
+          stations.find((station) => station.id === initialStation)?.region ??
+            '서울',
+        )
+      if (scrollTimer.current) clearTimeout(scrollTimer.current)
+      pendingRestore.current = entry
+      setNavigation(entry)
+      if (entry.depth === 2) onInspect()
+      else onExpand()
+    }
+    window.addEventListener('popstate', restore)
+    return () => {
+      window.removeEventListener('popstate', restore)
+      if (scrollTimer.current) clearTimeout(scrollTimer.current)
+    }
+  }, [date, initialStation, stations, onInspect, onExpand])
+  useLayoutEffect(() => {
+    const entry = pendingRestore.current,
+      panel = panelRef.current
+    if (!entry || entry.id !== navigation.id || !panel || !index) return
+    panel.scrollTop = entry.scrollTop
+    const focused = entry.focus
+      ? [
+          ...panel.querySelectorAll<HTMLButtonElement>(
+            '[data-service-family], [data-service-route]',
+          ),
+        ].find((button) =>
+          entry.focus?.kind === 'family'
+            ? button.dataset.serviceFamily === entry.focus.id
+            : button.dataset.serviceRoute === entry.focus?.id,
+        )
+      : panel.querySelector<HTMLButtonElement>('.service-back-button')
+    focused?.focus({ preventScroll: true })
+    panel.scrollTop = entry.scrollTop
+    pendingRestore.current = null
+  }, [navigation.id, index])
+  const capture = (focus = navigation.focus): ExplorerNavigation => ({
+    ...navigation,
+    scrollTop: panelRef.current?.scrollTop ?? 0,
+    scopeOpen: scopeRef.current?.open ?? navigation.scopeOpen,
+    advancedOpen: advancedRef.current?.open ?? navigation.advancedOpen,
+    focus,
+  })
+  const replace = (entry: ExplorerNavigation) => {
+    writeAppNavigation(
+      { version: 1, tab: 'network', explorer: entry },
+      'replace',
+    )
+    setNavigation(entry)
   }
-  const resetRoute = () => {
-    setRouteId(null)
-    setSelectedId(null)
-    scrollTop()
+  const push = (
+    entry: ExplorerNavigation,
+    focus: ExplorerNavigation['focus'],
+  ) => {
+    writeAppNavigation(
+      { version: 1, tab: 'network', explorer: capture(focus) },
+      'replace',
+    )
+    const next = { ...entry, id: navigationId(), scrollTop: 0, focus: null }
+    writeAppNavigation({ version: 1, tab: 'network', explorer: next }, 'push')
+    pendingRestore.current = next
+    setNavigation(next)
+  }
+  const update = (patch: Partial<ExplorerForm>) =>
+    replace({
+      ...capture(),
+      depth: 0,
+      form: { ...form, ...patch },
+      familyId: null,
+      routeId: null,
+      selectedId: null,
+      page: 0,
+      scopeOpen: true,
+    })
+  const back = (depth: 0 | 1) => {
+    const current = readExplorerNavigation(window.history.state, date)
+    if (current?.id === navigation.id && current.depth > depth) {
+      if (traversing.current) return
+      traversing.current = true
+      window.history.go(depth - current.depth)
+      return
+    }
+    const next = {
+      ...capture(),
+      id: navigationId(),
+      depth,
+      familyId: depth === 0 ? null : familyId,
+      routeId: null,
+      selectedId: null,
+      scrollTop: 0,
+    }
+    pendingRestore.current = next
+    replace(next)
     onExpand()
   }
-  const resetFamily = () => {
-    setFamilyId(null)
-    setRouteId(null)
-    setSelectedId(null)
-    setPage(0)
-    scrollTop()
-    onExpand()
+  const resetRoute = () => back(1)
+  const resetFamily = () => back(0)
+  const saveScroll = () => {
+    if (scrollTimer.current) clearTimeout(scrollTimer.current)
+    scrollTimer.current = setTimeout(() => {
+      const current = readExplorerNavigation(window.history.state, date)
+      if (current?.id !== navigation.id || !panelRef.current) return
+      writeAppNavigation(
+        {
+          version: 1,
+          tab: 'network',
+          explorer: { ...current, scrollTop: panelRef.current.scrollTop },
+        },
+        'replace',
+      )
+    }, 250)
   }
   const count = Math.max(1, Math.ceil((family?.routes.length ?? 0) / PAGE_SIZE))
   const currentPage = Math.min(page, count - 1)
@@ -152,7 +260,13 @@ export function ServiceExplorer({
       (currentPage + 1) * PAGE_SIZE,
     ) ?? []
   const changePage = (next: number) => {
-    setPage(next)
+    const position =
+      panelRef.current && resultsRef.current
+        ? panelRef.current.scrollTop +
+          resultsRef.current.getBoundingClientRect().top -
+          panelRef.current.getBoundingClientRect().top
+        : 0
+    replace({ ...capture(), page: next, scrollTop: position })
     if (panelRef.current && resultsRef.current)
       panelRef.current.scrollTop +=
         resultsRef.current.getBoundingClientRect().top -
@@ -161,11 +275,28 @@ export function ServiceExplorer({
   return (
     <section
       ref={panelRef}
+      onScroll={saveScroll}
       className={`service-explorer ${family ? 'has-service' : ''}`}
       id="network-panel"
       role="tabpanel"
       aria-labelledby="network-tab"
     >
+      {family && (
+        <div className="service-back-toolbar">
+          <button
+            className="service-back-button"
+            onClick={selected ? resetRoute : resetFamily}
+          >
+            <Icon name="arrow" size={17} />
+            <span>
+              {selected
+                ? `${family.label} 방면 목록으로`
+                : '열차 종류 선택으로'}
+            </span>
+          </button>
+          <span>{selected ? '전체 경로' : `${family.label} 방면`}</span>
+        </div>
+      )}
       <div className="service-explorer-heading">
         <h2>어떤 열차로 둘러볼까요?</h2>
         <p>
@@ -174,7 +305,15 @@ export function ServiceExplorer({
             : `${date.slice(0, 4)}.${date.slice(4, 6)}.${date.slice(6, 8)} 운행 기록 기준`}
         </p>
       </div>
-      <details className="service-scope-panel" open={!family}>
+      <details
+        ref={scopeRef}
+        className="service-scope-panel"
+        open={navigation.scopeOpen}
+        onToggle={(event) => {
+          if (event.currentTarget.open !== navigation.scopeOpen)
+            replace({ ...capture(), scopeOpen: event.currentTarget.open })
+        }}
+      >
         <summary>
           <Icon name="map" size={16} />
           {form.mode === 'all'
@@ -249,7 +388,18 @@ export function ServiceExplorer({
               onChange={(event) => update({ query: event.target.value })}
             />
           </div>
-          <details className="service-advanced">
+          <details
+            ref={advancedRef}
+            className="service-advanced"
+            open={navigation.advancedOpen}
+            onToggle={(event) => {
+              if (event.currentTarget.open !== navigation.advancedOpen)
+                replace({
+                  ...capture(),
+                  advancedOpen: event.currentTarget.open,
+                })
+            }}
+          >
             <summary>
               상세 필터
               <Icon name="chevron" size={14} />
@@ -325,8 +475,12 @@ export function ServiceExplorer({
                   aria-label="전체 경로 운행 열차 선택"
                   value={selectedId ?? ''}
                   onChange={(event) => {
-                    setSelectedId(event.target.value)
-                    scrollTop()
+                    replace({
+                      ...capture(),
+                      selectedId: event.target.value,
+                      scrollTop: 0,
+                    })
+                    panelRef.current?.scrollTo({ top: 0 })
                   }}
                 >
                   {route.services.map((trip) => (
@@ -393,11 +547,21 @@ export function ServiceExplorer({
                     <button
                       className="service-family-card"
                       key={group.id}
+                      data-service-family={group.id}
                       aria-label={`${group.label} 경로 보기`}
                       onClick={() => {
-                        setFamilyId(group.id)
-                        setPage(0)
-                        scrollTop()
+                        push(
+                          {
+                            ...capture(),
+                            depth: 1,
+                            familyId: group.id,
+                            routeId: null,
+                            selectedId: null,
+                            page: 0,
+                            scopeOpen: false,
+                          },
+                          { kind: 'family', id: group.id },
+                        )
                       }}
                     >
                       <span className="service-family-symbol">
@@ -417,10 +581,18 @@ export function ServiceExplorer({
                     <button
                       className="service-card service-route-card"
                       key={group.id}
+                      data-service-route={group.id}
                       onClick={() => {
-                        setRouteId(group.id)
-                        setSelectedId(group.services[0].id)
-                        scrollTop()
+                        push(
+                          {
+                            ...capture(),
+                            depth: 2,
+                            routeId: group.id,
+                            selectedId: group.services[0].id,
+                            scopeOpen: false,
+                          },
+                          { kind: 'route', id: group.id },
+                        )
                         onInspect()
                       }}
                     >

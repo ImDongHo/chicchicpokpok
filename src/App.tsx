@@ -32,6 +32,12 @@ import {
 import { findJourneys, journeyStops } from './lib/timetable.ts'
 import type { TimetableIndex } from './lib/timetable.ts'
 import { loadTimetable } from './lib/load-timetable.ts'
+import {
+  readAppNavigation,
+  readExplorerNavigation,
+  writeAppNavigation,
+} from './lib/app-navigation.ts'
+import type { AppTab } from './lib/app-navigation.ts'
 
 const initialDeparture =
   stations.find((station) => station.name === '서울')?.id ?? stations[0].id
@@ -54,9 +60,10 @@ function readFavorites(): string[] {
 }
 
 export default function App() {
-  const [tab, setTab] = useState<'stations' | 'route' | 'discover' | 'network'>(
-    'stations',
+  const [tab, setTab] = useState<AppTab>(
+    () => readAppNavigation(window.history.state)?.tab ?? 'stations',
   )
+  const restoreTimetableOnMount = useRef(tab !== 'stations')
   const [query, setQuery] = useState('')
   const [region, setRegion] = useState('서울')
   const [selected, setSelected] = useState<string | null>(null)
@@ -100,7 +107,7 @@ export default function App() {
   const [timetable, setTimetable] = useState<TimetableIndex | null>(null)
   const [loadState, setLoadState] = useState<
     'idle' | 'loading' | 'ready' | 'error'
-  >('idle')
+  >(() => (!isSampleData && tab !== 'stations' ? 'loading' : 'idle'))
   const [loadError, setLoadError] = useState('')
   const [journeyChoice, setJourneyChoice] = useState(0)
   const mounted = useRef(true)
@@ -110,7 +117,13 @@ export default function App() {
       mounted.current = false
     }
   }, [])
-  const [sheetExpanded, setSheetExpanded] = useState(false)
+  const [sheetExpanded, setSheetExpanded] = useState(
+    () =>
+      readAppNavigation(window.history.state)?.tab === 'network' &&
+      (readExplorerNavigation(window.history.state, dataDate)?.depth ?? 0) < 2,
+  )
+  const inspectNetwork = useCallback(() => setSheetExpanded(false), [])
+  const expandNetwork = useCallback(() => setSheetExpanded(true), [])
   const selectedStation = selected ? stationById.get(selected) : undefined
 
   useEffect(() => {
@@ -201,7 +214,7 @@ export default function App() {
             : filteredStations,
     [filteredStations, connection, tab, discoveryPreview, networkPreview.ids],
   )
-  async function ensureTimetable() {
+  const ensureTimetable = useCallback(async () => {
     if (isSampleData || timetable) return
     setLoadState('loading')
     setLoadError('')
@@ -224,7 +237,52 @@ export default function App() {
           : '운행 자료를 불러오지 못했습니다.',
       )
     }
-  }
+  }, [timetable])
+  useEffect(() => {
+    const current = readAppNavigation(window.history.state)
+    if (!current) writeAppNavigation({ version: 1, tab }, 'replace')
+    else if (current.tab !== tab)
+      writeAppNavigation({ version: 1, tab }, 'push')
+  }, [tab])
+  useEffect(() => {
+    const restore = (event: PopStateEvent) => {
+      const navigation = readAppNavigation(event.state)
+      if (!navigation) return
+      setTab(navigation.tab)
+      setSelected(null)
+      if (navigation.tab === 'network')
+        setSheetExpanded(
+          (readExplorerNavigation(event.state, dataDate)?.depth ?? 0) < 2,
+        )
+      if (navigation.tab !== 'stations') void ensureTimetable()
+    }
+    window.addEventListener('popstate', restore)
+    return () => window.removeEventListener('popstate', restore)
+  }, [ensureTimetable])
+  useEffect(() => {
+    if (!restoreTimetableOnMount.current || isSampleData || !scheduleFile)
+      return
+    let active = true
+    void loadTimetable(import.meta.env.BASE_URL + scheduleFile, dataDate).then(
+      (index) => {
+        if (!active) return
+        setTimetable(index)
+        setLoadState('ready')
+      },
+      (error: unknown) => {
+        if (!active) return
+        setLoadState('error')
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : '운행 자료를 불러오지 못했습니다.',
+        )
+      },
+    )
+    return () => {
+      active = false
+    }
+  }, [])
   function openRoutes() {
     setTab('route')
     setSheetExpanded(true)
@@ -239,6 +297,7 @@ export default function App() {
     void ensureTimetable()
   }
   function openNetwork(stationId = selected ?? departure) {
+    writeAppNavigation({ version: 1, tab: 'network' }, 'push')
     setNetworkSession((version) => version + 1)
     setNetworkInitialStation(stationId)
     setNetworkPreview({ ids: [], journey: null, overview: true })
@@ -911,8 +970,8 @@ export default function App() {
               error={loadError}
               onRetry={() => void ensureTimetable()}
               onPreview={previewNetwork}
-              onInspect={() => setSheetExpanded(false)}
-              onExpand={() => setSheetExpanded(true)}
+              onInspect={inspectNetwork}
+              onExpand={expandNetwork}
             />
           )}
           <footer className="sidebar-footer">
