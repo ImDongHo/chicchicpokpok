@@ -57,6 +57,7 @@ interface Boarding {
 }
 export interface TimetableIndex {
   departures: Map<string, Boarding[]>
+  services: Map<string, IndexedTrip>
   stationNames: Map<string, string>
   trainTypes: string[]
   tripCount: number
@@ -65,6 +66,7 @@ export interface TimetableIndex {
 
 export function createTimetableIndex(trips: TrainTrip[]): TimetableIndex {
   const departures = new Map<string, Boarding[]>(),
+    services = new Map<string, IndexedTrip>(),
     stationNames = new Map<string, string>(),
     trainTypes = new Set<string>()
   let tripCount = 0
@@ -94,6 +96,7 @@ export function createTimetableIndex(trips: TrainTrip[]): TimetableIndex {
     }
     if (!verified) continue
     tripCount++
+    services.set(trip.id, service)
     if (trip.trainType?.trim()) trainTypes.add(trip.trainType.trim())
     for (let position = 0; position < trip.stops.length; position++) {
       const stop = trip.stops[position]
@@ -117,6 +120,7 @@ export function createTimetableIndex(trips: TrainTrip[]): TimetableIndex {
     )
   return {
     departures,
+    services,
     stationNames,
     trainTypes: [...trainTypes],
     tripCount,
@@ -209,6 +213,28 @@ function journey(refs: LegRef[]): Journey {
     departureAt: legs[0].departureAt,
     arrivalAt: legs.at(-1)!.arrivalAt,
   }
+}
+
+// Reuse the verified complete service, including terminal and unmapped stops.
+// A route selected between two stations must never replace this stop sequence.
+export function fullServiceJourney(
+  index: TimetableIndex,
+  tripId: string,
+): Journey | null {
+  const service = index.services.get(tripId)
+  if (!service || service.trip.stops.length < 2) return null
+  const departureAt = service.departures[0],
+    arrivalAt = service.arrivals.at(-1)
+  if (departureAt == null || arrivalAt == null) return null
+  return journey([
+    {
+      service,
+      from: 0,
+      to: service.trip.stops.length - 1,
+      departureAt,
+      arrivalAt,
+    },
+  ])
 }
 
 function compareJourneys(

@@ -23,6 +23,7 @@ interface Props {
   segments: ConnectionSegment[]
   date: string
   filterLabel?: string
+  mode?: 'journey' | 'full-service'
   onExpand: () => void
 }
 
@@ -37,6 +38,7 @@ export function JourneyResults({
   segments,
   date,
   filterLabel,
+  mode = 'journey',
   onExpand,
 }: Props) {
   const selected = options[selectedIndex] ?? options[0]
@@ -92,54 +94,80 @@ export function JourneyResults({
   return (
     <>
       <div className="connection-heading">
-        <span className="eyebrow">운행 기록으로 확인한 경로</span>
+        <span className="eyebrow">
+          {mode === 'full-service'
+            ? '열차 전체 운행 경로'
+            : '운행 기록으로 확인한 경로'}
+        </span>
         <h2>
           {stationLabel(stops[0].name)}
           <Icon name="arrow" size={20} />
           {stationLabel(stops.at(-1)!.name)}
         </h2>
         <div className="journey-summary">
-          <strong>{transfers ? `환승 ${transfers}회` : '직통'}</strong>
+          <strong>
+            {mode === 'full-service'
+              ? '전체 구간'
+              : transfers
+                ? `환승 ${transfers}회`
+                : '직통'}
+          </strong>
           <span>
             {formatKoreaTime(selected.departureAt, date)} →{' '}
             {formatKoreaTime(selected.arrivalAt, date)}
           </span>
         </div>
         <p>
-          {Math.floor(duration / 60)}시간 {duration % 60}분 · 선택한 열차편의
-          구간 정차역 {stops.length}개
+          {Math.floor(duration / 60)}시간 {duration % 60}분 ·{' '}
+          {mode === 'full-service'
+            ? '전체 정차역'
+            : '선택한 열차편의 구간 정차역'}{' '}
+          {stops.length}개
         </p>
-        <p>열차편에 따라 오송 등 중간 정차역이 달라질 수 있습니다.</p>
+        <p>
+          {mode === 'full-service'
+            ? '선택한 역 앞뒤를 포함한 출발역부터 종착역까지의 정차 기록입니다.'
+            : '열차편에 따라 오송 등 중간 정차역이 달라질 수 있습니다.'}
+        </p>
         {filterLabel && <p>열차 종류: {filterLabel}</p>}
         <button className="edit-journey-button" onClick={onExpand}>
-          열차·출발 시각·정렬 변경
+          {mode === 'full-service'
+            ? '다른 운행 열차 보기'
+            : '열차·출발 시각·정렬 변경'}
         </button>
       </div>
-      <label className="journey-picker">
-        이용 열차 선택
-        <select
-          aria-label="이용 열차 선택"
-          value={selectedIndex}
-          onChange={(event) => onChoose(Number(event.target.value))}
-        >
-          {options.map((option, index) => (
-            <option key={option.id} value={index}>
-              {formatKoreaTime(option.departureAt, date)} →{' '}
-              {formatKoreaTime(option.arrivalAt, date)} ·{' '}
-              {option.legs
-                .map(
-                  (leg) =>
-                    `${trainTypeLabel(leg) ?? '열차'} ${leg.trainNumber}호`,
-                )
-                .join(' / ')}{' '}
-              ·{' '}
-              {option.legs.length === 1
-                ? '직통'
-                : `환승 ${option.legs.length - 1}회`}
-            </option>
-          ))}
-        </select>
-      </label>
+      {mode === 'full-service' ? (
+        <p className="service-selected-train">
+          {trainTypeLabel(selected.legs[0]) ?? '차종 미제공'}{' '}
+          {selected.legs[0].trainNumber}호
+        </p>
+      ) : (
+        <label className="journey-picker">
+          이용 열차 선택
+          <select
+            aria-label="이용 열차 선택"
+            value={selectedIndex}
+            onChange={(event) => onChoose(Number(event.target.value))}
+          >
+            {options.map((option, index) => (
+              <option key={option.id} value={index}>
+                {formatKoreaTime(option.departureAt, date)} →{' '}
+                {formatKoreaTime(option.arrivalAt, date)} ·{' '}
+                {option.legs
+                  .map(
+                    (leg) =>
+                      `${trainTypeLabel(leg) ?? '열차'} ${leg.trainNumber}호`,
+                  )
+                  .join(' / ')}{' '}
+                ·{' '}
+                {option.legs.length === 1
+                  ? '직통'
+                  : `환승 ${option.legs.length - 1}회`}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <BookingLinks journey={selected} />
       <ol className="connection-stops">
         {stops.map((stop, index) => {

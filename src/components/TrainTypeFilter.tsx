@@ -11,9 +11,15 @@ interface Props {
   value: TrainFilter
   types: string[]
   onChange: (value: TrainFilter) => void
+  hint?: string
 }
 
-export function TrainTypeFilter({ value, types, onChange }: Props) {
+export function TrainTypeFilter({
+  value,
+  types,
+  onChange,
+  hint = '환승 구간과 추천 귀가편에도 같은 조건을 적용합니다.',
+}: Props) {
   const id = useId()
   const choices = availableTrainTypes(types, value.category)
   return (
@@ -97,7 +103,7 @@ export function TrainTypeFilter({ value, types, onChange }: Props) {
         </p>
       </details>
       <p className="train-filter-hint" id={`${id}-hint`}>
-        환승 구간과 추천 귀가편에도 같은 조건을 적용합니다.
+        {hint}
       </p>
       {value.types?.length === 0 && !value.includeUnknown && (
         <p className="train-filter-hint" role="status">

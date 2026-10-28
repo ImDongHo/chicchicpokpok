@@ -5,6 +5,8 @@ import { Icon } from './components/Icon.tsx'
 import { RailMap } from './components/RailMap.tsx'
 import { JourneyResults } from './components/JourneyResults.tsx'
 import { DiscoveryPanel } from './components/DiscoveryPanel.tsx'
+import { ServiceExplorer } from './components/ServiceExplorer.tsx'
+import type { ServicePreview } from './components/ServiceExplorer.tsx'
 import { TrainTypeFilter } from './components/TrainTypeFilter.tsx'
 import { DEFAULT_TRAIN_FILTER, trainFilterLabel } from './lib/train-filter.ts'
 import type { TrainFilter } from './lib/train-filter.ts'
@@ -52,7 +54,9 @@ function readFavorites(): string[] {
 }
 
 export default function App() {
-  const [tab, setTab] = useState<'stations' | 'route' | 'discover'>('stations')
+  const [tab, setTab] = useState<'stations' | 'route' | 'discover' | 'network'>(
+    'stations',
+  )
   const [query, setQuery] = useState('')
   const [region, setRegion] = useState('서울')
   const [selected, setSelected] = useState<string | null>(null)
@@ -71,6 +75,18 @@ export default function App() {
   const [preference, setPreference] =
     useState<JourneyPreference>('fewest-transfers')
   const [discoveryPreview, setDiscoveryPreview] = useState<string[]>([])
+  const [networkInitialStation, setNetworkInitialStation] =
+    useState(initialDeparture)
+  const [networkSession, setNetworkSession] = useState(0)
+  const [networkPreview, setNetworkPreview] = useState<ServicePreview>({
+    ids: [],
+    journey: null,
+    overview: false,
+  })
+  const previewNetwork = useCallback((preview: ServicePreview) => {
+    setNetworkPreview(preview)
+    setSelected(null)
+  }, [])
   const previewDiscovery = useCallback((ids: string[]) => {
     setDiscoveryPreview(ids)
     setSelected((current) =>
@@ -126,9 +142,11 @@ export default function App() {
     [timetable, request],
   )
   const selectedJourney = journeys[journeyChoice] ?? null
+  const displayedJourney =
+    tab === 'network' ? networkPreview.journey : selectedJourney
   const selectedStops = useMemo(
-    () => (selectedJourney ? journeyStops(selectedJourney) : []),
-    [selectedJourney],
+    () => (displayedJourney ? journeyStops(displayedJourney) : []),
+    [displayedJourney],
   )
   const connection = useMemo(
     () =>
@@ -136,19 +154,19 @@ export default function App() {
         ? request
           ? findConnection(lines, request.from, request.to)
           : null
-        : selectedJourney
+        : displayedJourney
           ? selectedStops.map((stop) => stop.stationId)
           : null,
-    [request, selectedJourney, selectedStops],
+    [request, displayedJourney, selectedStops],
   )
   const connectionSegments = useMemo(
     () =>
-      selectedJourney
-        ? buildJourneySegments(selectedJourney, dataDate)
+      displayedJourney
+        ? buildJourneySegments(displayedJourney, dataDate)
         : isSampleData
           ? buildConnectionSegments(lines, connection)
           : [],
-    [connection, selectedJourney],
+    [connection, displayedJourney],
   )
   const routeStations = useMemo(
     () =>
@@ -161,22 +179,27 @@ export default function App() {
   )
   const mapCandidates = useMemo(
     () =>
-      tab === 'discover'
-        ? discoveryPreview.flatMap((id) => {
+      tab === 'network'
+        ? [...new Set(networkPreview.ids)].flatMap((id) => {
             const station = stationById.get(id)
             return station ? [station] : []
           })
-        : connection
-          ? [
-              ...new Map(
-                connection.flatMap((id) => {
-                  const station = stationById.get(id)
-                  return station ? [[id, station] as const] : []
-                }),
-              ).values(),
-            ]
-          : filteredStations,
-    [filteredStations, connection, tab, discoveryPreview],
+        : tab === 'discover'
+          ? discoveryPreview.flatMap((id) => {
+              const station = stationById.get(id)
+              return station ? [station] : []
+            })
+          : connection
+            ? [
+                ...new Map(
+                  connection.flatMap((id) => {
+                    const station = stationById.get(id)
+                    return station ? [[id, station] as const] : []
+                  }),
+                ).values(),
+              ]
+            : filteredStations,
+    [filteredStations, connection, tab, discoveryPreview, networkPreview.ids],
   )
   async function ensureTimetable() {
     if (isSampleData || timetable) return
@@ -213,6 +236,16 @@ export default function App() {
     setRequest(null)
     setSelected(null)
     setDiscoveryPreview([departure])
+    void ensureTimetable()
+  }
+  function openNetwork(stationId = selected ?? departure) {
+    setNetworkSession((version) => version + 1)
+    setNetworkInitialStation(stationId)
+    setNetworkPreview({ ids: [stationId], journey: null, overview: false })
+    setTab('network')
+    setRequest(null)
+    setSelected(null)
+    setSheetExpanded(true)
     void ensureTimetable()
   }
   function chooseRecommendedRoute(
@@ -330,6 +363,19 @@ export default function App() {
             >
               <Icon name="map" size={17} />
               여행지 추천
+            </button>
+            <button
+              role="tab"
+              id="network-tab"
+              aria-selected={tab === 'network'}
+              aria-controls="network-panel"
+              className={tab === 'network' ? 'active' : ''}
+              onClick={() => {
+                if (tab !== 'network') openNetwork()
+              }}
+            >
+              <Icon name="train" size={17} />
+              노선 탐색
             </button>
           </div>
 
@@ -838,7 +884,7 @@ export default function App() {
                 </p>
               </details>
             </section>
-          ) : (
+          ) : tab === 'discover' ? (
             <DiscoveryPanel
               stations={stations}
               regions={regions}
@@ -851,6 +897,22 @@ export default function App() {
               onRetry={() => void ensureTimetable()}
               onPreview={previewDiscovery}
               onSelect={chooseRecommendedRoute}
+            />
+          ) : (
+            <ServiceExplorer
+              key={`${networkInitialStation}:${networkSession}`}
+              stations={stations}
+              regions={regions}
+              index={timetable}
+              date={dataDate}
+              sample={isSampleData}
+              initialStation={networkInitialStation}
+              loadState={loadState}
+              error={loadError}
+              onRetry={() => void ensureTimetable()}
+              onPreview={previewNetwork}
+              onInspect={() => setSheetExpanded(false)}
+              onExpand={() => setSheetExpanded(true)}
             />
           )}
           <footer className="sidebar-footer">
@@ -870,11 +932,13 @@ export default function App() {
             selected={selected}
             scopeStations={mapCandidates}
             overview={
-              tab !== 'discover' &&
-              region === '전체' &&
-              !query.trim() &&
-              !onlyFavorites &&
-              !connection
+              tab === 'network'
+                ? networkPreview.overview && !connection
+                : tab !== 'discover' &&
+                  region === '전체' &&
+                  !query.trim() &&
+                  !onlyFavorites &&
+                  !connection
             }
             connection={connection}
             segments={connectionSegments}
@@ -941,6 +1005,12 @@ export default function App() {
                   <Icon name="arrow" size={15} />
                 </button>
               </div>
+              <button
+                className="service-explorer-link"
+                onClick={() => openNetwork(selectedStation.id)}
+              >
+                이 역의 전체 운행 열차 보기 <Icon name="arrow" size={15} />
+              </button>
             </div>
           )}
           {selectedStation && (

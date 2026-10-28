@@ -229,11 +229,12 @@ button:focus:not(:focus-visible) {
 }
 .tabs button {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   flex: 1;
-  padding: 11px 3px;
+  padding: 8px 2px;
   border-radius: 9px;
   font-size: 13px;
   font-weight: 500;
@@ -892,6 +893,221 @@ button:focus:not(:focus-visible) {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+.service-explorer {
+  flex: 1;
+  min-height: 0;
+  padding: 0 22px 22px;
+  overflow-y: auto;
+}
+.service-explorer-heading {
+  padding: 14px;
+  margin-bottom: 12px;
+  border-radius: 14px;
+  background: #eaf2ec;
+}
+.service-explorer-heading h2 {
+  margin: 8px 0;
+  font-size: 23px;
+  letter-spacing: -0.8px;
+}
+.service-explorer-heading p,
+.service-explorer-note,
+.service-explorer-status,
+.service-result-count {
+  margin: 8px 0 12px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+.service-explorer-heading p {
+  margin-bottom: 0;
+}
+.service-explorer.has-service .service-explorer-heading {
+  position: relative;
+  padding: 0;
+  margin-bottom: 8px;
+  background: transparent;
+}
+.service-explorer.has-service .service-explorer-heading .eyebrow {
+  display: none;
+}
+.service-explorer.has-service .service-explorer-heading h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.service-full-route .edit-journey-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  margin-top: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--green);
+}
+.service-scope-panel {
+  background: #fff;
+  border-radius: 12px;
+}
+.service-scope-panel > summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 13px 12px;
+  list-style: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green);
+}
+.service-scope-panel > summary::-webkit-details-marker {
+  display: none;
+}
+.service-scope-panel > summary > svg {
+  flex-shrink: 0;
+}
+.service-scope-panel > summary > svg:last-child {
+  margin-left: auto;
+}
+.service-scope-panel[open] > summary > svg:last-child {
+  transform: rotate(90deg);
+}
+.service-scope-body {
+  padding: 0 12px 10px;
+}
+.service-scope-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+.service-scope-buttons button,
+.service-pagination button {
+  min-height: 40px;
+  padding: 8px 5px;
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.service-scope-buttons button[aria-pressed='true'] {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+  font-weight: 700;
+}
+.service-scope-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  margin-top: 10px;
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.service-scope-field select {
+  flex: 1;
+  min-width: 0;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  font-size: 13px;
+}
+.search-wrap.service-search {
+  margin: 10px 0 0;
+  height: 43px;
+}
+.service-explorer .train-type-filter label.train-type-choice {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 7px 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.service-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 9px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+  color: #263f35;
+  box-shadow: 0 2px 8px #263f3505;
+}
+.service-card:hover {
+  box-shadow: inset 0 0 0 1px var(--green);
+}
+.service-card-train,
+.service-card-times,
+.service-card-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.service-card-train {
+  overflow-wrap: anywhere;
+}
+.service-card-train > svg {
+  flex-shrink: 0;
+}
+.service-card strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+}
+.service-card-action {
+  color: var(--green);
+  font-weight: 700;
+}
+.service-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 14px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.service-pagination button {
+  padding: 8px 14px;
+}
+.service-selected-train {
+  margin: 0 0 14px;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+}
+.service-explorer-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 40px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--green);
 }
 .sidebar.planning .sidebar-heading {
   display: none;
@@ -1824,7 +2040,7 @@ button:focus:not(:focus-visible) {
     padding: 3px;
   }
   .tabs button {
-    padding: 8px;
+    padding: 8px 2px;
     font-size: 13px;
     gap: 6px;
   }
