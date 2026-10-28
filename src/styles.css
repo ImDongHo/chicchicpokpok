@@ -93,9 +93,10 @@ button:focus:not(:focus-visible) {
   align-items: center;
   padding: 0 34px;
   gap: 24px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
   position: relative;
   z-index: 10;
+  box-shadow: 0 1px 0 #263f3512;
 }
 .brand {
   display: flex;
@@ -121,14 +122,15 @@ button:focus:not(:focus-visible) {
   place-items: center;
   background: var(--green);
   color: #fff;
-  border-radius: 13px;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px #17695718;
 }
 .topbar-copy {
   font-size: 12px;
   letter-spacing: 0.1px;
   color: var(--text-muted);
-  border-left: 1px solid var(--ui-border);
-  padding-left: 25px;
+  border-left: 0;
+  padding-left: 14px;
   margin-left: 8px;
 }
 .header-action {
@@ -136,16 +138,17 @@ button:focus:not(:focus-visible) {
   display: flex;
   gap: 10px;
   align-items: center;
-  padding: 11px 15px;
-  background: #f2f6ef;
+  padding: 12px 17px;
+  background: var(--green);
   border: 1px solid var(--ui-border);
-  border-radius: 9px;
-  color: #39604f;
+  border-radius: 10px;
+  color: #fff;
   font-size: 12px;
   font-weight: 600;
+  border-color: var(--green);
 }
 .header-action:hover {
-  background: #e6efe2;
+  background: #105c49;
 }
 .workspace {
   display: flex;
@@ -156,16 +159,16 @@ button:focus:not(:focus-visible) {
 .sidebar {
   width: 386px;
   flex-shrink: 0;
-  background: #fff;
-  border-right: 1px solid var(--border);
+  background: #f8faf7;
+  border-right: 0;
   display: flex;
   flex-direction: column;
   z-index: 3;
-  box-shadow: 6px 0 24px #263f3505;
+  box-shadow: 8px 0 32px #263f3509;
   min-height: 0;
 }
 .sidebar-heading {
-  padding: 18px 27px 20px;
+  padding: 20px 27px;
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
@@ -188,7 +191,7 @@ button:focus:not(:focus-visible) {
 .sidebar-heading h1 {
   margin-top: 8px;
   font-size: 24px;
-  letter-spacing: -1.6px;
+  letter-spacing: -1px;
   line-height: 1.3;
   font-weight: 800;
   position: relative;
@@ -219,8 +222,8 @@ button:focus:not(:focus-visible) {
 .tabs {
   display: flex;
   margin: 0 26px 21px;
-  background: #f3f5f1;
-  border-radius: 10px;
+  background: #e9eeea;
+  border-radius: 12px;
   padding: 4px;
   flex-shrink: 0;
 }
@@ -230,19 +233,20 @@ button:focus:not(:focus-visible) {
   align-items: center;
   gap: 8px;
   flex: 1;
-  padding: 10px 3px;
-  border-radius: 7px;
+  padding: 11px 3px;
+  border-radius: 9px;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-muted);
   min-width: 0;
   white-space: nowrap;
+  position: relative;
 }
 .tabs button.active {
   background: #fff;
   color: var(--green);
   font-weight: 700;
-  box-shadow: 0 2px 6px #344a3410;
+  box-shadow: 0 2px 8px #263f3510;
 }
 .explore-panel {
   display: flex;
@@ -255,9 +259,9 @@ button:focus:not(:focus-visible) {
   align-items: center;
   margin: 0 26px;
   gap: 10px;
-  background: #f8faf6;
+  background: #fff;
   border: 1px solid var(--ui-border);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 0 13px;
   height: 47px;
   color: #5f6f64;
@@ -303,10 +307,11 @@ button:focus:not(:focus-visible) {
   white-space: nowrap;
   padding: 10px 14px;
   border: 1px solid var(--ui-border);
-  border-radius: 7px;
+  border-radius: 999px;
   font-size: 12px;
   color: var(--text-muted);
   flex-shrink: 0;
+  background: #fff;
 }
 .region-chips button:hover {
   background: #f3f7ef;
@@ -322,16 +327,20 @@ button:focus:not(:focus-visible) {
   justify-content: space-between;
   padding: 0 27px 12px;
   flex-shrink: 0;
+  padding-bottom: 14px;
 }
 .results-heading h2 {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   letter-spacing: -0.3px;
 }
 .results-heading h2 span {
   font-size: 11px;
   margin-left: 3px;
   color: #86703f;
+  background: #fff;
+  border-radius: 5px;
+  padding: 2px 5px;
 }
 .favorites-filter {
   display: flex;
@@ -348,30 +357,35 @@ button:focus:not(:focus-visible) {
   fill: #efdfa6;
 }
 .station-list {
-  padding: 0 17px 15px;
+  padding: 2px 18px 18px;
   overflow: auto;
   scrollbar-width: thin;
-  scrollbar-color: #dfe6db transparent;
+  scrollbar-color: #7d8d75 transparent;
   flex: 1;
   min-height: 0;
 }
 .station-card {
   position: relative;
-  border: 1px solid transparent;
-  border-bottom-color: var(--ui-border);
-  border-radius: 10px;
-  margin-bottom: 2px;
+  border: 0;
+  border-bottom-color: transparent;
+  border-radius: 13px;
+  margin-bottom: 9px;
   background: #fff;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 44px;
   align-items: center;
+  box-shadow: 0 2px 8px #263f3508;
 }
 .station-card:hover {
-  background: #f8faf5;
+  background: #fff;
+  box-shadow: 0 4px 14px #263f3514;
 }
 .station-card.selected {
   border-color: #176957;
-  background: #f3f7ee;
+  background: #edf4ed;
+  outline: 2px solid var(--green);
+  outline-offset: 0;
+  box-shadow: 0 4px 16px #17695712;
 }
 .station-main {
   display: flex;
@@ -385,28 +399,28 @@ button:focus:not(:focus-visible) {
 .station-symbol {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
-  background: #f1f4ee;
-  color: #5f6f64;
+  border-radius: 13px;
+  background: #edf4ef;
+  color: var(--green);
   display: grid;
   place-items: center;
   flex-shrink: 0;
 }
 .selected .station-symbol {
-  background: #e3edda;
-  color: #5f6f64;
+  background: #dfece4;
+  color: var(--green);
 }
 .station-copy {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
   flex: 1;
 }
 .station-copy > strong {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.6px;
 }
 .station-copy > strong > span {
   font-size: 12px;
@@ -420,7 +434,7 @@ button:focus:not(:focus-visible) {
 .line-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 9px;
+  gap: 4px 6px;
   margin-top: 3px;
 }
 .line-tags > span {
@@ -430,6 +444,9 @@ button:focus:not(:focus-visible) {
   font-size: 11px;
   color: #4f6249;
   white-space: nowrap;
+  padding: 1px 3px;
+  background: #f0f4ee;
+  border-radius: 4px;
 }
 .line-tags i {
   width: 4px;
@@ -452,7 +469,7 @@ button:focus:not(:focus-visible) {
   justify-content: center;
   min-width: 40px;
   min-height: 40px;
-  border-radius: 7px;
+  border-radius: 12px;
 }
 .station-card > .favorite-button {
   position: static;
@@ -461,6 +478,7 @@ button:focus:not(:focus-visible) {
 }
 .favorite-button:hover {
   color: #86703f;
+  background: #f0f4eb;
 }
 .favorite-button.saved {
   color: #bd9849;
@@ -475,11 +493,12 @@ button:focus:not(:focus-visible) {
   align-items: center;
   justify-content: space-between;
   padding: 14px 24px;
-  border-top: 1px solid var(--border);
+  border-top: 0;
   font-size: 11px;
   color: var(--text-muted);
   flex-shrink: 0;
-  background: #fdfefb;
+  background: #fff;
+  box-shadow: 0 -1px 0 #263f3510;
 }
 .sidebar-footer > span:first-child {
   display: flex;
@@ -629,11 +648,11 @@ button:focus:not(:focus-visible) {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: -0.2px;
-  background: #fffef5ed;
+  background: #fff;
   border: 1px solid var(--ui-border);
-  border-radius: 7px;
+  border-radius: 10px;
   color: #4f6249;
-  box-shadow: 0 2px 5px #45543a05;
+  box-shadow: 0 3px 12px #263f3510;
 }
 .map-count {
   color: #4f6249;
@@ -653,17 +672,17 @@ button:focus:not(:focus-visible) {
   flex-direction: column;
   background: #fffef9;
   border: 1px solid var(--ui-border);
-  border-radius: 9px;
+  border-radius: 11px;
   overflow: hidden;
-  box-shadow: 0 3px 12px #3f56380a;
+  box-shadow: 0 4px 16px #263f3510;
   z-index: 2;
 }
 .map-controls button {
   display: grid;
   place-items: center;
-  width: 37px;
-  height: 38px;
-  color: var(--text-muted);
+  width: 40px;
+  height: 40px;
+  color: var(--green);
 }
 .map-controls button + button {
   border-top: 1px solid var(--ui-border);
@@ -675,19 +694,20 @@ button:focus:not(:focus-visible) {
   max-width: calc(100% - 30px);
   overflow-x: auto;
   position: absolute;
-  bottom: 35px;
+  bottom: 48px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   gap: 17px;
   align-items: center;
   white-space: nowrap;
-  background: #fffdf2e8;
+  background: #fffffffa;
   backdrop-filter: blur(6px);
   padding: 12px 18px;
   border: 1px solid var(--ui-border);
-  border-radius: 8px;
+  border-radius: 10px;
   z-index: 2;
+  box-shadow: 0 3px 14px #263f3510;
 }
 .map-legend > span {
   display: flex;
@@ -709,9 +729,9 @@ button:focus:not(:focus-visible) {
   font-size: 11px;
   color: var(--text-muted);
   white-space: normal;
-  background: #fffef9;
+  background: #fff;
   border: 1px solid var(--ui-border);
-  border-radius: 5px;
+  border-radius: 7px;
   padding: 4px 8px;
   max-width: calc(100% - 30px);
   width: max-content;
@@ -727,10 +747,10 @@ button:focus:not(:focus-visible) {
   bottom: 110px;
   width: 274px;
   padding: 17px 18px 16px;
-  background: #fffffcf5;
+  background: #fff;
   border: 1px solid var(--ui-border);
-  border-radius: 14px;
-  box-shadow: 0 8px 28px #42543e12;
+  border-radius: 18px;
+  box-shadow: 0 12px 36px #263f3518;
   backdrop-filter: blur(8px);
   z-index: 2;
 }
@@ -822,11 +842,12 @@ button:focus:not(:focus-visible) {
 .load-more-stations {
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 11px;
   padding: 12px;
   margin-top: 10px;
   font-size: 11px;
   color: var(--green);
+  background: #fff;
 }
 .load-more-stations span {
   color: var(--muted);
@@ -890,8 +911,9 @@ button:focus:not(:focus-visible) {
 }
 .route-options {
   margin-top: 10px;
-  border: 1px solid var(--ui-border);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
 }
 .route-options > summary,
 .route-note > summary {
@@ -908,7 +930,8 @@ button:focus:not(:focus-visible) {
   display: none;
 }
 .route-options > summary {
-  padding: 10px 12px;
+  padding: 10px 0;
+  font-weight: 500;
 }
 .route-options > summary small {
   color: var(--text-muted);
@@ -923,7 +946,9 @@ button:focus:not(:focus-visible) {
   transform: rotate(90deg);
 }
 .route-options-body {
-  padding: 0 10px 8px;
+  padding: 2px 10px 12px;
+  background: #edf3ed;
+  border-radius: 11px;
 }
 .journey-preference {
   display: flex;
@@ -965,11 +990,11 @@ button:focus:not(:focus-visible) {
   justify-content: center;
   align-items: center;
   gap: 6px;
-  background: #eef4e7;
+  background: #fff;
   border: 1px solid var(--ui-border);
-  border-radius: 7px;
-  padding: 9px 6px;
-  font-size: 11px;
+  border-radius: 9px;
+  padding: 11px 6px;
+  font-size: 12px;
   color: var(--green);
   font-weight: 600;
 }
@@ -985,12 +1010,15 @@ button:focus:not(:focus-visible) {
   flex: 1;
 }
 .discovery-heading {
-  padding: 0 27px 15px;
+  padding: 16px;
+  margin: 0 22px 16px;
+  border-radius: 15px;
+  background: linear-gradient(130deg, #e7f1e9, #f8faf7);
 }
 .discovery-heading h2 {
-  margin: 10px 0 8px;
-  font-size: 24px;
-  letter-spacing: -1px;
+  margin: 8px 0 10px;
+  font-size: 25px;
+  letter-spacing: -0.9px;
 }
 .discovery-heading p {
   color: var(--text-muted);
@@ -1048,21 +1076,23 @@ button:focus:not(:focus-visible) {
   font-size: 11px;
 }
 .discovery-results {
-  padding: 0 27px 20px;
+  padding: 0 22px 22px;
 }
 .discovery-status,
 .discovery-result-count {
   font-size: 11px;
   line-height: 1.8;
   color: var(--text-muted);
-  margin: 8px 0 15px;
+  margin: 3px 0 12px;
 }
 .destination-card {
-  border: 1px solid var(--ui-border);
-  background: #fbfcf8;
-  padding: 14px;
-  border-radius: 11px;
-  margin-bottom: 11px;
+  border: 0;
+  background: #fff;
+  padding: 0;
+  border-radius: 16px;
+  margin-bottom: 17px;
+  box-shadow: 0 3px 14px #263f350c;
+  overflow: hidden;
 }
 .destination-title {
   display: flex;
@@ -1070,35 +1100,30 @@ button:focus:not(:focus-visible) {
   align-items: center;
 }
 .destination-title h3 {
-  font-size: 20px;
+  font-size: 25px;
   margin: 0;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  line-height: 1.2;
 }
 .destination-title > span {
   font-size: 11px;
   color: var(--green);
-  padding: 4px 7px;
-  background: #ebf2e1;
+  padding: 5px 8px;
+  background: #e7f1e9;
   border-radius: 5px;
+  font-weight: 500;
 }
 .destination-card p {
   color: var(--text-muted);
   font-size: 11px;
-  line-height: 1.6;
+  line-height: 1.7;
   margin: 8px 0;
-}
-.destination-times {
-  font-size: 13px;
-  color: #31533f;
-}
-.destination-times small {
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--text-muted);
 }
 .destination-actions {
   display: flex;
-  gap: 7px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 14px;
 }
 .destination-actions button {
   flex: 1;
@@ -1107,13 +1132,15 @@ button:focus:not(:focus-visible) {
   justify-content: center;
   gap: 7px;
   border: 1px solid var(--ui-border);
-  border-radius: 7px;
+  border-radius: 9px;
   padding: 8px 5px;
-  color: #557147;
-  font-size: 11px;
+  color: var(--green);
+  font-size: 12px;
+  min-height: 40px;
+  background: #fff;
 }
 .destination-actions button:first-child {
-  color: white;
+  color: #fff;
   background: var(--green);
   border-color: var(--green);
 }
@@ -1123,20 +1150,18 @@ button:focus:not(:focus-visible) {
     gap: 5px;
   }
   .discovery-heading {
-    padding: 0 20px 12px;
+    padding: 16px 15px;
+    margin: 0 20px 14px;
   }
   .discovery-heading h2 {
-    font-size: 21px;
+    font-size: 23px;
     margin-top: 7px;
   }
   .discovery-form {
     padding: 0 20px 12px;
   }
   .discovery-results {
-    padding: 0 20px 17px;
-  }
-  .sidebar:not(.expanded) .discovery-panel.has-results .discovery-form {
-    display: none;
+    padding: 0 20px 18px;
   }
 }
 .timetable-date {
@@ -1190,12 +1215,12 @@ button:focus:not(:focus-visible) {
 }
 .journey-picker select {
   max-width: 100%;
-  padding: 9px 7px;
-  font-size: 11px;
+  padding: 11px 9px;
+  font-size: 12px;
   border: 1px solid var(--ui-border);
   color: #385533;
-  border-radius: 7px;
-  background: #f9fbf5;
+  border-radius: 9px;
+  background: #fff;
 }
 .stop-times {
   display: flex;
@@ -1230,8 +1255,8 @@ button:focus:not(:focus-visible) {
   gap: 19px;
   padding: 12px 13px;
   border: 1px solid var(--ui-border);
-  background: #f9fbf6;
-  border-radius: 9px;
+  background: #fff;
+  border-radius: 11px;
 }
 .route-form label > span {
   display: flex;
@@ -1255,8 +1280,8 @@ button:focus:not(:focus-visible) {
   background: transparent;
   border: 0;
   color: #3e5d39;
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 700;
+  font-size: 15px;
   flex: 1;
   min-width: 0;
   padding: 0 2px;
@@ -1284,14 +1309,15 @@ button:focus:not(:focus-visible) {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 13px 12px;
+  padding: 14px 12px;
   width: 100%;
   background: var(--green);
-  border-radius: 8px;
+  border-radius: 11px;
   color: #fff;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   margin-top: 14px;
+  box-shadow: 0 4px 12px #17695716;
 }
 .primary-button:hover:not(:disabled) {
   background: #105c49;
@@ -1338,9 +1364,9 @@ button:focus:not(:focus-visible) {
   font-size: 11px;
   line-height: 1.8;
   color: var(--text-muted);
-  background: #f8faf4;
-  border: 1px solid var(--ui-border);
-  border-radius: 8px;
+  background: #edf3ed;
+  border: 0;
+  border-radius: 11px;
   padding: 11px 12px;
   margin: 0 26px 17px;
   flex-shrink: 0;
@@ -1352,7 +1378,10 @@ button:focus:not(:focus-visible) {
   margin-top: 10px;
 }
 .connection-heading {
-  padding: 3px 0 23px;
+  padding: 16px;
+  background: #edf4ef;
+  border-radius: 14px;
+  margin-bottom: 18px;
 }
 .connection-heading .eyebrow {
   font-size: 11px;
@@ -1361,9 +1390,9 @@ button:focus:not(:focus-visible) {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 23px;
+  font-size: 26px;
   font-weight: 700;
-  letter-spacing: -1px;
+  letter-spacing: -0.8px;
   margin: 9px 0;
 }
 .connection-heading h2 > svg {
@@ -1372,6 +1401,8 @@ button:focus:not(:focus-visible) {
 .connection-heading p {
   font-size: 11px;
   color: var(--text-muted);
+  line-height: 1.7;
+  margin-top: 6px;
 }
 .connection-stops {
   padding: 0;
@@ -1473,7 +1504,7 @@ button:focus:not(:focus-visible) {
   border-radius: 16px;
   background: #fff;
   padding: 5px 9px;
-  box-shadow: 0 2px 5px #2e503516;
+  box-shadow: 0 3px 8px #263f351a;
   cursor: pointer;
   color: var(--route-color, #175c46);
 }
@@ -1747,7 +1778,7 @@ button:focus:not(:focus-visible) {
     gap: 4px;
   }
   .station-copy > strong {
-    font-size: 14px;
+    font-size: 16px;
   }
   .station-copy > small {
     font-size: 12px;
@@ -1808,7 +1839,7 @@ button:focus:not(:focus-visible) {
   .map-controls {
     right: 12px;
     top: 12px;
-    border-radius: 7px;
+    border-radius: 10px;
     flex-direction: row;
   }
   .map-controls button {
@@ -2040,4 +2071,165 @@ button:focus:not(:focus-visible) {
   color: #4f6249;
   border-radius: 5px;
   padding: 1px 5px;
+}
+
+.tabs button.active::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: calc(50% - 9px);
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--green);
+}
+.journey-summary > span {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+}
+.discovery-filter-panel {
+  margin: 0 22px 14px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 8px #263f3508;
+}
+.discovery-panel.has-results .discovery-heading .eyebrow {
+  display: none;
+}
+.discovery-panel.has-results .discovery-heading h2 {
+  margin-top: 0;
+}
+.discovery-filter-panel > summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 13px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green);
+  cursor: pointer;
+  list-style: none;
+}
+.discovery-filter-panel > summary::-webkit-details-marker {
+  display: none;
+}
+.discovery-filter-panel > summary > small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.discovery-filter-panel > summary > svg:last-child {
+  margin-left: auto;
+}
+.discovery-filter-panel[open] > summary > svg:last-child {
+  transform: rotate(90deg);
+}
+.discovery-filter-panel .discovery-form {
+  padding: 0 14px 14px;
+}
+.destination-scene {
+  --scene-bg: #eaf1e8;
+  --scene-ink: #176957;
+  position: relative;
+  height: 80px;
+  background: var(--scene-bg);
+}
+.destination-scene svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.scene-coast .destination-scene {
+  --scene-bg: #e6f0ef;
+}
+.scene-river .destination-scene {
+  --scene-bg: #edf2e5;
+}
+.scene-heritage .destination-scene {
+  --scene-bg: #f3eee2;
+}
+.scene-city .destination-scene {
+  --scene-bg: #eaf1eb;
+}
+.destination-number {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.destination-body {
+  padding: 17px;
+}
+.destination-body .destination-story {
+  margin: 7px 0 10px;
+  font-size: 12px;
+}
+.destination-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.destination-tags span {
+  padding: 3px 6px;
+  border-radius: 5px;
+  color: var(--text-muted);
+  background: #f0f4ee;
+  font-size: 11px;
+}
+.destination-itinerary {
+  margin-top: 15px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--ui-border);
+}
+.destination-itinerary > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+}
+.destination-itinerary > div > span,
+.destination-itinerary small {
+  font-size: 11px;
+}
+.destination-itinerary strong {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #263f35;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  font-variant-numeric: tabular-nums;
+}
+.destination-itinerary small {
+  margin-left: auto;
+}
+.destination-itinerary > p {
+  margin: 7px 0 0;
+}
+.destination-body .destination-station {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 11px 0 0;
+}
+.destination-station > svg {
+  flex-shrink: 0;
+}
+@media (max-width: 760px) {
+  .discovery-filter-panel {
+    margin: 0 20px 14px;
+  }
+  .destination-body {
+    padding: 16px;
+  }
 }

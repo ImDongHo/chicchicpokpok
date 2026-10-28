@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { Station } from "../types.ts";
 import type { TimetableIndex, JourneySearchOptions } from "../lib/timetable.ts";
-import { formatKoreaTime } from "../lib/timetable.ts";
 import type { DestinationRecommendation } from "../lib/recommendations.ts";
 import { Icon } from "./Icon.tsx";
+import { DestinationCard } from "./DestinationCard.tsx";
 
 interface Props {
   stations: Station[];
@@ -195,97 +195,109 @@ export function DiscoveryPanel({
     >
       <div className="discovery-heading">
         <span className="eyebrow">기차로 만나는 여행지</span>
-        <h2>어디까지 떠나볼까요?</h2>
+        <h2>다음 여행은 어디로?</h2>
         <p>
           {sample
             ? "샘플 지도에서는 실제 열차편 추천을 제공하지 않습니다."
             : `${date.slice(0, 4)}.${date.slice(4, 6)}.${date.slice(6, 8)} 운행 기록 기준 · 최신 예정 시간표가 아닙니다.`}
         </p>
       </div>
-      <form className="discovery-form" onSubmit={submit}>
-        <div className="discovery-fields">
-          <label>
-            출발 지역
+      <details className="discovery-filter-panel" open={results === null}>
+        <summary>
+          <Icon name="route" size={16} />
+          출발과 여행 조건
+          <small>
+            {stations.find((station) => station.id === from)?.name ??
+              "출발역 선택"}{" "}
+            · {form.duration / 60}시간 이내
+          </small>
+          <Icon name="chevron" size={16} />
+        </summary>
+        <form className="discovery-form" onSubmit={submit}>
+          <div className="discovery-fields">
+            <label>
+              출발 지역
+              <select
+                aria-label="추천 출발 지역"
+                value={form.region}
+                onChange={(event) => update({ region: event.target.value })}
+              >
+                {regions.map((region) => (
+                  <option key={region}>{region}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              출발역
+              <select
+                aria-label="추천 출발역"
+                value={from}
+                onChange={(event) => update({ from: event.target.value })}
+              >
+                {candidates.map((station) => (
+                  <option key={station.id} value={station.id}>
+                    {station.name}역
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="discovery-fields">
+            <label>
+              출발 시각 이후
+              <input
+                aria-label="추천 출발 시각 이후"
+                type="time"
+                required
+                value={form.time}
+                onChange={(event) => update({ time: event.target.value })}
+              />
+            </label>
+            <label>
+              편도 이동시간
+              <select
+                aria-label="추천 최대 이동시간"
+                value={form.duration}
+                onChange={(event) =>
+                  update({ duration: Number(event.target.value) })
+                }
+              >
+                <option value={120}>2시간 이내</option>
+                <option value={180}>3시간 이내</option>
+                <option value={240}>4시간 이내</option>
+              </select>
+            </label>
+          </div>
+          <label className="discovery-transfer">
+            환승 조건
             <select
-              aria-label="추천 출발 지역"
-              value={form.region}
-              onChange={(event) => update({ region: event.target.value })}
-            >
-              {regions.map((region) => (
-                <option key={region}>{region}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            출발역
-            <select
-              aria-label="추천 출발역"
-              value={from}
-              onChange={(event) => update({ from: event.target.value })}
-            >
-              {candidates.map((station) => (
-                <option key={station.id} value={station.id}>
-                  {station.name}역
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="discovery-fields">
-          <label>
-            출발 시각 이후
-            <input
-              aria-label="추천 출발 시각 이후"
-              type="time"
-              required
-              value={form.time}
-              onChange={(event) => update({ time: event.target.value })}
-            />
-          </label>
-          <label>
-            편도 이동시간
-            <select
-              aria-label="추천 최대 이동시간"
-              value={form.duration}
+              aria-label="추천 환승 조건"
+              value={form.transfers}
               onChange={(event) =>
-                update({ duration: Number(event.target.value) })
+                update({ transfers: Number(event.target.value) })
               }
             >
-              <option value={120}>2시간 이내</option>
-              <option value={180}>3시간 이내</option>
-              <option value={240}>4시간 이내</option>
+              <option value={0}>직통만</option>
+              <option value={1}>환승 1회까지 · 여유 10분</option>
             </select>
           </label>
-        </div>
-        <label className="discovery-transfer">
-          환승 조건
-          <select
-            aria-label="추천 환승 조건"
-            value={form.transfers}
-            onChange={(event) =>
-              update({ transfers: Number(event.target.value) })
-            }
+          <label className="roundtrip-toggle">
+            <input
+              type="checkbox"
+              checked={form.roundTrip}
+              onChange={(event) => update({ roundTrip: event.target.checked })}
+            />
+            당일 귀가편도 확인<span>현지 2시간 이상 · 23시까지 귀가</span>
+          </label>
+          <button
+            className="primary-button"
+            disabled={sample || loadState !== "ready" || !from || busy}
           >
-            <option value={0}>직통만</option>
-            <option value={1}>환승 1회까지 · 여유 10분</option>
-          </select>
-        </label>
-        <label className="roundtrip-toggle">
-          <input
-            type="checkbox"
-            checked={form.roundTrip}
-            onChange={(event) => update({ roundTrip: event.target.checked })}
-          />
-          당일 귀가편도 확인<span>현지 2시간 이상 · 23시까지 귀가</span>
-        </label>
-        <button
-          className="primary-button"
-          disabled={sample || loadState !== "ready" || !from || busy}
-        >
-          {busy ? "여행지 찾는 중…" : "갈 수 있는 지역 찾기"}
-          <Icon name="arrow" size={16} />
-        </button>
-      </form>
+            {busy ? "여행지 찾는 중…" : "갈 수 있는 지역 찾기"}
+            <Icon name="arrow" size={16} />
+          </button>
+        </form>
+      </details>
       <div className="discovery-results" aria-live="polite" aria-busy={busy}>
         {loadState === "loading" && (
           <p className="discovery-status">운행 기록을 불러오고 있습니다.</p>
@@ -309,58 +321,15 @@ export function DiscoveryPanel({
                 ? `조건에 맞는 ${results.length}개 지역 · 빠른 도착 기준`
                 : "조건에 맞는 지역을 확인하지 못했어요. 시간·환승·귀가 조건을 변경해 보세요."}
             </p>
-            {results.map((result) => (
-              <article className="destination-card" key={result.station.id}>
-                <div className="destination-title">
-                  <h3>{result.city}</h3>
-                  <span>
-                    {result.outbound.legs.length === 1
-                      ? "직통"
-                      : `환승 ${result.outbound.legs.length - 1}회`}
-                  </span>
-                </div>
-                <p>
-                  {result.area} · 도착 {result.station.name}역
-                </p>
-                <strong className="destination-times">
-                  {formatKoreaTime(result.outbound.departureAt, date)} →{" "}
-                  {formatKoreaTime(result.outbound.arrivalAt, date)}
-                  <small>
-                    {" "}
-                    ·{" "}
-                    {Math.round(
-                      (result.outbound.arrivalAt -
-                        result.outbound.departureAt) /
-                        60000,
-                    )}
-                    분
-                  </small>
-                </strong>
-                <p>
-                  {result.returning
-                    ? `귀가편 ${formatKoreaTime(result.returning.departureAt, date)} → ${formatKoreaTime(result.returning.arrivalAt, date)} 확인`
-                    : "귀가편 조건을 적용하지 않은 추천입니다."}
-                </p>
-                <div className="destination-actions">
-                  <button
-                    onClick={() =>
-                      onSelect(from, result.station.id, result.searchOptions)
-                    }
-                  >
-                    가는 편 보기
-                    <Icon name="arrow" size={13} />
-                  </button>
-                  {result.returning && result.returnOptions && (
-                    <button
-                      onClick={() =>
-                        onSelect(result.station.id, from, result.returnOptions!)
-                      }
-                    >
-                      오는 편 보기
-                    </button>
-                  )}
-                </div>
-              </article>
+            {results.map((result, order) => (
+              <DestinationCard
+                key={result.station.id}
+                result={result}
+                order={order}
+                date={date}
+                from={from}
+                onSelect={onSelect}
+              />
             ))}
           </>
         )}
