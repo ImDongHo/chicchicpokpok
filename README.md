@@ -64,7 +64,7 @@ npm run preview -- --host 127.0.0.1 --port 4173 --strictPort
 `scripts/collect-railway-data.mjs`는 다음 API의 전체 페이지를 수집합니다.
 
 - 국가철도공단\_철도역 정보: ODCloud `15067652/v1`, 2025-07-11 버전. 역 이름·좌표·주소를 사용합니다. [공식 명세](https://infuser.odcloud.kr/oas/docs?namespace=15067652/v1)
-- 국토교통부\_(TAGO)\_열차정보: `https://apis.data.go.kr/1613000/TrainInfo`의 `GetVhcleKndList`, `GetCtyCodeList`, `GetCtyAcctoTrainSttnList`, `GetStrtpntAlocFndTrainInfo`를 사용합니다. 같은 날짜·열차번호·역·출발 및 도착 시각이 모두 일치하는 경우에만 공식 차종명을 연결합니다. 매칭되지 않는 편의 차종을 열차번호 범위로 추정하지 않습니다.
+- 국토교통부\_(TAGO)\_열차정보: `https://apis.data.go.kr/1613000/TrainInfo`의 `GetVhcleKndList`, `GetCtyCodeList`, `GetCtyAcctoTrainSttnList`, `GetStrtpntAlocFndTrainInfo`를 사용합니다. 같은 날짜·열차번호·역과 운행계획의 예정 출발·도착 시각이 모두 일치하는 경우에만 공식 차종명을 연결합니다. 운행계획이 없는 경우에는 기록 시각의 정확한 일치를 요구합니다. 지연 등이 반영된 운행기록 시각은 경로 목록에 그대로 보존하며 차종 대조용 예정 시각과 섞지 않습니다. 매칭되지 않는 편의 차종을 열차번호 범위로 추정하지 않습니다.
 - 한국철도공사\_열차운행정보: `https://apis.data.go.kr/B551457/run/v2`의 `travelerTrainRunPlan2`, `travelerTrainRunInfo2`. 조회일을 하나로 고정하고 역 필터 없이 운행계획과 정차정보를 수집합니다.
 
 발급받은 키가 환경에 안전하게 제공된 경우 `npm run data:collect`로도 실행할 수 있습니다. 선택적 `RAILWAY_DATA_DATE`는 `YYYYMMDD` 형식입니다. 로그에는 인증키나 인증 URL을 출력하지 않으며 TLS 검증을 유지합니다.
