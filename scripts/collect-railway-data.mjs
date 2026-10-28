@@ -418,7 +418,7 @@ export async function main() {
   // Probe the official timetable/classification source without exposing its key.
   try {
     const url = new URL(
-      'https://apis.data.go.kr/1613000/TrainInfoService/GetVhcleKndList',
+      'https://apis.data.go.kr/1613000/TrainInfo/GetVhcleKndList',
     )
     url.searchParams.set('serviceKey', key)
     url.searchParams.set('_type', 'json')
