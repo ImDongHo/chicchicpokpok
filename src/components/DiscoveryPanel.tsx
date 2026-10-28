@@ -20,6 +20,48 @@ interface Props {
   onSelect: (from: string, to: string, options: JourneySearchOptions) => void;
 }
 
+const PAGE_SIZE = 8;
+
+function DiscoveryPagination({
+  page,
+  count,
+  onChange,
+  position,
+}: {
+  page: number;
+  count: number;
+  onChange: (page: number) => void;
+  position: string;
+}) {
+  if (count <= 1) return null;
+  return (
+    <nav
+      className="discovery-pagination"
+      aria-label={`추천 지역 페이지 (${position})`}
+    >
+      <button
+        type="button"
+        aria-label="이전 지역 보기"
+        disabled={page === 0}
+        onClick={() => onChange(page - 1)}
+      >
+        <Icon name="chevron" size={15} className="previous-page-icon" />
+      </button>
+      <span>
+        {page + 1} / {count}
+      </span>
+      <button
+        type="button"
+        aria-label="다음 지역 보기"
+        disabled={page + 1 >= count}
+        onClick={() => onChange(page + 1)}
+      >
+        <Icon name="chevron" size={15} />
+      </button>
+    </nav>
+  );
+}
+
 export function DiscoveryPanel({
   stations,
   regions,
@@ -45,6 +87,10 @@ export function DiscoveryPanel({
   const [results, setResults] = useState<DestinationRecommendation[] | null>(
     null,
   );
+  const [page, setPage] = useState(0);
+  const [destinationQuery, setDestinationQuery] = useState("");
+  const panelRef = useRef<HTMLElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState("");
   const worker = useRef<Worker | null>(null),
@@ -76,9 +122,46 @@ export function DiscoveryPanel({
   const from = candidates.some((station) => station.id === form.from)
     ? form.from
     : (candidates[0]?.id ?? "");
+  const filteredResults = useMemo(() => {
+    const query = destinationQuery
+      .replace(/\s+/g, "")
+      .replace(/역$/, "")
+      .toLocaleLowerCase("ko-KR");
+    return (results ?? []).filter((result) =>
+      [
+        result.city,
+        result.area,
+        result.station.name,
+        result.station.region,
+      ].some((value) =>
+        value.replace(/\s+/g, "").toLocaleLowerCase("ko-KR").includes(query),
+      ),
+    );
+  }, [results, destinationQuery]);
+  const pageCount = Math.max(1, Math.ceil(filteredResults.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const visibleResults = useMemo(
+    () =>
+      filteredResults.slice(
+        currentPage * PAGE_SIZE,
+        (currentPage + 1) * PAGE_SIZE,
+      ),
+    [filteredResults, currentPage],
+  );
   useEffect(() => {
-    onPreview(from ? [from] : []);
-  }, [from, onPreview]);
+    onPreview([
+      ...(from ? [from] : []),
+      ...visibleResults.map((result) => result.station.id),
+    ]);
+  }, [from, visibleResults, onPreview]);
+  const changePage = (nextPage: number) => {
+    setPage(Math.max(0, Math.min(nextPage, pageCount - 1)));
+    const panel = panelRef.current,
+      target = resultsRef.current;
+    if (panel && target)
+      panel.scrollTop +=
+        target.getBoundingClientRect().top - panel.getBoundingClientRect().top;
+  };
   const cancel = () => {
     generation.current++;
     worker.current?.terminate();
@@ -97,8 +180,9 @@ export function DiscoveryPanel({
       next.from = available[0]?.id ?? "";
     setForm(next);
     setResults(null);
+    setPage(0);
+    setDestinationQuery("");
     setFailure("");
-    onPreview(next.from ? [next.from] : []);
   };
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -106,6 +190,8 @@ export function DiscoveryPanel({
     cancel();
     setBusy(true);
     setResults(null);
+    setPage(0);
+    setDestinationQuery("");
     setFailure("");
     const id = ++generation.current;
     try {
@@ -140,10 +226,6 @@ export function DiscoveryPanel({
           return;
         }
         setResults(event.data.results);
-        onPreview([
-          from,
-          ...event.data.results.map((result) => result.station.id),
-        ]);
       };
       current.onerror = () => {
         if (generation.current !== id) return;
@@ -176,7 +258,6 @@ export function DiscoveryPanel({
           requireReturn: form.roundTrip,
           minStayMinutes: 120,
           homeBy: "23:00",
-          limit: 8,
         },
       });
     } catch {
@@ -188,6 +269,7 @@ export function DiscoveryPanel({
   }
   return (
     <section
+      ref={panelRef}
       className={`discovery-panel ${results ? "has-results" : ""}`}
       id="discovery-panel"
       role="tabpanel"
@@ -298,7 +380,12 @@ export function DiscoveryPanel({
           </button>
         </form>
       </details>
-      <div className="discovery-results" aria-live="polite" aria-busy={busy}>
+      <div
+        ref={resultsRef}
+        className="discovery-results"
+        aria-live="polite"
+        aria-busy={busy}
+      >
         {loadState === "loading" && (
           <p className="discovery-status">운행 기록을 불러오고 있습니다.</p>
         )}
@@ -316,27 +403,96 @@ export function DiscoveryPanel({
         )}
         {results && (
           <>
+            {results.length > 0 && (
+              <div className="discovery-toolbar">
+                <div className="search-wrap discovery-city-search">
+                  <Icon name="search" size={16} />
+                  <input
+                    type="search"
+                    aria-label="추천 도착 도시 검색"
+                    placeholder="서울 등 도시명"
+                    value={destinationQuery}
+                    onChange={(event) => {
+                      setDestinationQuery(event.target.value);
+                      setPage(0);
+                    }}
+                  />
+                  {destinationQuery && (
+                    <button
+                      type="button"
+                      aria-label="도착 도시 검색어 지우기"
+                      onClick={() => {
+                        setDestinationQuery("");
+                        setPage(0);
+                      }}
+                    >
+                      <Icon name="close" size={16} />
+                    </button>
+                  )}
+                </div>
+                <DiscoveryPagination
+                  page={currentPage}
+                  count={pageCount}
+                  onChange={changePage}
+                  position="위"
+                />
+              </div>
+            )}
             <p className="discovery-result-count">
               {results.length
-                ? `조건에 맞는 ${results.length}개 지역 · 빠른 도착 기준`
+                ? `조건에 맞는 총 ${results.length}개 지역${destinationQuery.trim() ? ` · 검색 ${filteredResults.length}개` : ""}`
                 : "조건에 맞는 지역을 확인하지 못했어요. 시간·환승·귀가 조건을 변경해 보세요."}
+              {filteredResults.length > 0 && (
+                <span className="discovery-page-range">
+                  {" "}
+                  · {currentPage * PAGE_SIZE + 1}–
+                  {Math.min(
+                    (currentPage + 1) * PAGE_SIZE,
+                    filteredResults.length,
+                  )}
+                  번째 · 빠른 도착 순
+                </span>
+              )}
             </p>
-            {results.map((result, order) => (
+            {results.length > 0 && filteredResults.length === 0 && (
+              <div className="discovery-search-empty">
+                <p>
+                  “{destinationQuery}”와 일치하는 도시가 없어요. 다른 이름으로
+                  찾거나 여행 조건을 변경해 보세요.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDestinationQuery("");
+                    setPage(0);
+                  }}
+                >
+                  전체 결과 보기
+                </button>
+              </div>
+            )}
+            {visibleResults.map((result, order) => (
               <DestinationCard
                 key={result.station.id}
                 result={result}
-                order={order}
+                order={currentPage * PAGE_SIZE + order}
                 date={date}
                 from={from}
                 onSelect={onSelect}
               />
             ))}
+            <DiscoveryPagination
+              page={currentPage}
+              count={pageCount}
+              onChange={changePage}
+              position="아래"
+            />
           </>
         )}
         {!results && !busy && loadState === "ready" && (
           <p className="discovery-status">
-            출발 지역과 역을 선택해 주세요. 열차로 도착할 수 있는 지역을 최대
-            8곳 추천합니다.
+            출발 지역과 역을 선택해 주세요. 조건에 맞는 전체 지역을 확인하고
+            8곳씩 보여드립니다.
           </p>
         )}
       </div>

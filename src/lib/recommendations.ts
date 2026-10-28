@@ -94,7 +94,12 @@ export function recommendDestinations(
   if (midnight === null) return []
   const result: DestinationRecommendation[] = [],
     seen = new Set<string>()
-  const limit = Math.max(1, Math.min(options.limit ?? 8, 12))
+  // Eligibility must not depend on how many cards fit on the first page.
+  // Callers may request a smaller shortlist, but the default covers every city.
+  const limit = Math.max(
+    1,
+    Math.min(options.limit ?? stations.length, stations.length),
+  )
   for (const candidate of candidates) {
     if (seen.has(candidate.city.key)) continue
     let returning: Journey | null = null,

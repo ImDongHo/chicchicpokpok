@@ -239,7 +239,7 @@ test("a return after 23:00 or the next day is not a day-trip recommendation", ()
   );
 });
 
-test("recommendation time caps, transfer caps and a maximum of eight cards are enforced", () => {
+test("recommendation time and transfer caps are enforced without truncating eligible cities", () => {
   const nearby = Array.from({ length: 10 }, (_, i) =>
     station(`역${i}`, `충남 도시${i}시`),
   );
@@ -261,7 +261,11 @@ test("recommendation time caps, transfer caps and a maximum of eight cards are e
   ]);
   const all = [stations[0], stations[2], ...nearby];
   const options = { ...discovery, requireReturn: false };
-  assert.equal(recommendDestinations(index, all, "서울", options).length, 8);
+  assert.equal(recommendDestinations(index, all, "서울", options).length, 11);
+  assert.equal(
+    recommendDestinations(index, all, "서울", { ...options, limit: 8 }).length,
+    8,
+  );
   assert.equal(
     recommendDestinations(index, all, "서울", { ...options, limit: 12 }).length,
     11,
@@ -286,6 +290,104 @@ test("recommendation time caps, transfer caps and a maximum of eight cards are e
     [],
     "Never invent reverse services",
   );
+});
+
+test("Dongdaegu to Seoul remains eligible beyond twelve earlier cities under a four-hour direct round-trip condition", async () => {
+  const origin = station("동대구", "대구광역시 동구", "영남");
+  const near = Array.from({ length: 16 }, (_, i) =>
+    station(`가까운역${i}`, `경북 도시${i}시`, "영남"),
+  );
+  const index = createTimetableIndex([
+    ...near.flatMap((place, i) => [
+      trip(`out-${i}`, [
+        ["동대구", "09:00"],
+        [place.id, `09:${String(i + 10).padStart(2, "0")}`],
+      ]),
+      trip(`return-${i}`, [
+        [place.id, "13:00"],
+        ["동대구", "13:30"],
+      ]),
+    ]),
+    trip("ktx-seoul", [
+      ["동대구", "09:30"],
+      ["서울", "11:30"],
+    ]),
+    trip("ktx-home", [
+      ["서울", "14:00"],
+      ["동대구", "16:00"],
+    ]),
+  ]);
+  const all = [origin, ...near, stations[0]];
+  const options = { ...discovery, maxTransfers: 0, maxDurationMinutes: 240 };
+  const results = recommendDestinations(index, all, origin.id, options);
+  assert.equal(results.length, 17);
+  assert.equal(
+    results.findIndex((result) => result.city === "서울"),
+    16,
+  );
+  const seoul = results.at(-1)!;
+  assert.equal(seoul.outbound.legs.length, 1);
+  assert.equal(
+    seoul.outbound.arrivalAt - seoul.outbound.departureAt,
+    120 * 60000,
+  );
+  assert.ok(
+    seoul.returning!.departureAt - seoul.outbound.arrivalAt >= 120 * 60000,
+  );
+  assert.equal(
+    seoul.returning!.legs.at(-1)!.stops.at(-1)!.stationId,
+    origin.id,
+  );
+  assert.equal(
+    seoul.outbound.id,
+    findJourneys(index, origin.id, "서울", seoul.searchOptions)[0].id,
+  );
+  assert.equal(
+    seoul.returning!.id,
+    findJourneys(index, "서울", origin.id, seoul.returnOptions!)[0].id,
+  );
+  assert.equal(
+    recommendDestinations(index, all, origin.id, { ...options, limit: 8 })
+      .length,
+    8,
+  );
+  const previousSelf = Object.getOwnPropertyDescriptor(globalThis, "self");
+  const messages: {
+    id: number;
+    results: { city: string }[];
+    error?: string;
+  }[] = [];
+  const scope = {
+    onmessage: null as null | ((event: unknown) => void),
+    postMessage: (message: (typeof messages)[number]) => messages.push(message),
+  };
+  try {
+    Object.defineProperty(globalThis, "self", {
+      configurable: true,
+      value: scope,
+    });
+    await import("../src/workers/discovery.ts");
+    scope.onmessage!({
+      data: {
+        id: 42,
+        index,
+        stations: all,
+        from: origin.id,
+        options: { ...options, limit: 8 },
+      },
+    });
+    assert.equal(messages[0].id, 42);
+    assert.equal(messages[0].error, undefined);
+    assert.equal(
+      messages[0].results.length,
+      17,
+      "The worker must return all eligible cities even for an older client's eight-item request",
+    );
+    assert.ok(messages[0].results.some((result) => result.city === "서울"));
+  } finally {
+    if (previousSelf) Object.defineProperty(globalThis, "self", previousSelf);
+    else Reflect.deleteProperty(globalThis, "self");
+  }
 });
 
 test("city grouping accepts abbreviated provinces and distinguishes counties from metro districts", () => {

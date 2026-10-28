@@ -16,7 +16,11 @@ self.onmessage = (
   try {
     self.postMessage({
       id,
-      results: recommendDestinations(index, stations, from, options),
+      // The UI paginates these results; eligibility must cover every city.
+      results: recommendDestinations(index, stations, from, {
+        ...options,
+        limit: stations.length,
+      }),
     })
   } catch {
     self.postMessage({

@@ -13,6 +13,7 @@ import {
   buildJourneySegments,
   buildSegmentedMapPaths,
 } from '../src/lib/route-segments.ts'
+import { recommendDestinations } from '../src/lib/recommendations.ts'
 
 async function main() {
   const root = fileURLToPath(new URL('../', import.meta.url))
@@ -291,6 +292,104 @@ async function main() {
       stops: stops.map((stop) => stop.name),
     })
   }
+  const discoveryOrigin = dataset.stations.find(
+    (station) => station.name === '동대구',
+  )
+  const seoulStation = dataset.stations.find(
+    (station) => station.name === '서울',
+  )
+  const discoveryCriteria = {
+    date,
+    earliestTime: '09:00',
+    maxDurationMinutes: 240,
+    maxTransfers: 0,
+    minTransferMinutes: 10,
+    requireReturn: true,
+    minStayMinutes: 120,
+    homeBy: '23:00',
+  }
+  const destinations = discoveryOrigin
+    ? recommendDestinations(
+        index,
+        dataset.stations,
+        discoveryOrigin.id,
+        discoveryCriteria,
+      )
+    : []
+  for (const destination of destinations) {
+    validateJourney(
+      destination.outbound,
+      discoveryOrigin.id,
+      destination.station.id,
+    )
+    validateJourney(
+      destination.returning,
+      destination.station.id,
+      discoveryOrigin.id,
+    )
+    assert.ok(
+      destination.outbound.arrivalAt - destination.outbound.departureAt <=
+        240 * 60000,
+    )
+    assert.ok(
+      destination.returning.arrivalAt - destination.returning.departureAt <=
+        240 * 60000,
+    )
+    assert.ok(
+      destination.returning.departureAt - destination.outbound.arrivalAt >=
+        120 * 60000,
+    )
+    assert.equal(dayOf(destination.returning.arrivalAt), date)
+    assert.ok(hourOf(destination.returning.arrivalAt) <= '23:00')
+  }
+  const seoulCity = destinations.find(
+    (destination) => destination.city === '서울',
+  )
+  let seoulStationExample = null
+  if (discoveryOrigin && seoulStation) {
+    const direct = findJourneys(index, discoveryOrigin.id, seoulStation.id, {
+      ...discoveryCriteria,
+      latestArrivalTime: '23:00',
+      preference: 'fastest',
+    })
+    for (const outbound of direct) {
+      const afterStay =
+        Math.ceil((outbound.arrivalAt + 120 * 60000) / 60000) * 60000
+      if (dayOf(afterStay) !== date) continue
+      const returning = findJourneys(
+        index,
+        seoulStation.id,
+        discoveryOrigin.id,
+        {
+          ...discoveryCriteria,
+          earliestTime: hourOf(afterStay),
+          latestArrivalTime: '23:00',
+          preference: 'fastest',
+          limit: 1,
+        },
+      )[0]
+      if (!returning) continue
+      validateJourney(outbound, discoveryOrigin.id, seoulStation.id)
+      validateJourney(returning, seoulStation.id, discoveryOrigin.id)
+      seoulStationExample = {
+        outbound: summarize(outbound),
+        returning: summarize(returning),
+      }
+      assert.ok(
+        seoulCity,
+        'An eligible Seoul round trip was lost from the complete destination results',
+      )
+      break
+    }
+  }
+  const discoveryExample = {
+    from: discoveryOrigin?.name ?? null,
+    criteria: discoveryCriteria,
+    eligibleCities: destinations.length,
+    seoulCityRank: seoulCity ? destinations.indexOf(seoulCity) + 1 : null,
+    seoulCityStation: seoulCity?.station.name ?? null,
+    seoulStationExample,
+  }
   const report = {
     date,
     validatedMapLocations: dataset.stations.length,
@@ -299,6 +398,7 @@ async function main() {
     testedServices,
     skippedServices: skipped,
     representativeCases: cases,
+    discoveryExample,
     osongExamples: {
       stopsAtOsong:
         directDaegu.find((trip) => trip.stops.includes('오송')) ?? null,
@@ -321,6 +421,10 @@ async function main() {
   if (process.env.GITHUB_ACTIONS === 'true')
     console.log(
       `::notice title=Map connection validation::${mapConnectionsChecked} journey map connections checked; every consecutive known station remains linked, including gaps at missing intermediate or transfer locations.`,
+    )
+  if (process.env.GITHUB_ACTIONS === 'true')
+    console.log(
+      `::notice title=Destination eligibility validation::${JSON.stringify(discoveryExample).replaceAll('%', '%25')}`,
     )
 }
 
