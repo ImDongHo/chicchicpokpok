@@ -901,14 +901,14 @@ button:focus:not(:focus-visible) {
   overflow-y: auto;
 }
 .service-explorer-heading {
-  padding: 14px;
+  padding: 12px;
   margin-bottom: 12px;
   border-radius: 14px;
   background: #eaf2ec;
 }
 .service-explorer-heading h2 {
-  margin: 8px 0;
-  font-size: 23px;
+  margin: 0 0 5px;
+  font-size: 22px;
   letter-spacing: -0.8px;
 }
 .service-explorer-heading p,
@@ -1108,6 +1108,116 @@ button:focus:not(:focus-visible) {
   margin-top: 8px;
   font-size: 12px;
   color: var(--green);
+}
+.service-advanced > summary,
+.service-display-guide > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  list-style: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.service-advanced > summary::-webkit-details-marker,
+.service-display-guide > summary::-webkit-details-marker {
+  display: none;
+}
+.service-advanced > summary > svg:last-child,
+.service-display-guide > summary > svg:last-child {
+  margin-left: auto;
+}
+.service-advanced[open] > summary > svg:last-child,
+.service-display-guide[open] > summary > svg:last-child {
+  transform: rotate(90deg);
+}
+.service-display-guide p,
+.service-step-hint {
+  margin: 0 0 12px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+.service-family-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 9px;
+  padding: 13px;
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  background: #fff;
+  color: #263f35;
+  text-align: left;
+}
+.service-family-card:hover {
+  background: #edf4ef;
+  border-color: var(--green);
+}
+.service-family-symbol {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  color: var(--green);
+  background: #edf4ef;
+}
+.service-family-card > span:nth-child(2) {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+.service-family-card strong {
+  font-size: 20px;
+  font-weight: 800;
+}
+.service-family-card small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.service-family-card > svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.service-breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.service-breadcrumbs button {
+  min-height: 40px;
+  padding: 7px 3px;
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.service-departure-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 14px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.service-departure-picker select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px;
+  border: 1px solid var(--ui-border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--green);
+  font-size: 12px;
 }
 .sidebar.planning .sidebar-heading {
   display: none;

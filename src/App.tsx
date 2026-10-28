@@ -241,7 +241,7 @@ export default function App() {
   function openNetwork(stationId = selected ?? departure) {
     setNetworkSession((version) => version + 1)
     setNetworkInitialStation(stationId)
-    setNetworkPreview({ ids: [stationId], journey: null, overview: false })
+    setNetworkPreview({ ids: [], journey: null, overview: true })
     setTab('network')
     setRequest(null)
     setSelected(null)
@@ -929,6 +929,11 @@ export default function App() {
 
         <div className={`map-area ${connection ? 'showing-route' : ''}`}>
           <RailMap
+            idleHint={
+              tab === 'network'
+                ? '열차 종류 → 방면을 고르면 전체 경로가 나타납니다.'
+                : undefined
+            }
             selected={selected}
             scopeStations={mapCandidates}
             overview={

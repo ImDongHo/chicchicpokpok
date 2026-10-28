@@ -9,6 +9,7 @@ import {
 import {
   explorerStations,
   findExplorerServices,
+  groupExplorerServices,
   scopedMapStations,
 } from '../lib/service-explorer.ts'
 import type { ServiceScope } from '../lib/service-explorer.ts'
@@ -25,7 +26,6 @@ export interface ServicePreview {
   journey: Journey | null
   overview: boolean
 }
-
 interface Props {
   stations: Station[]
   regions: readonly string[]
@@ -40,7 +40,6 @@ interface Props {
   onInspect: () => void
   onExpand: () => void
 }
-
 const PAGE_SIZE = 12
 
 export function ServiceExplorer({
@@ -67,9 +66,11 @@ export function ServiceExplorer({
     trainFilter: DEFAULT_TRAIN_FILTER,
   })
   const [page, setPage] = useState(0)
-  const panelRef = useRef<HTMLElement>(null)
-  const resultsRef = useRef<HTMLDivElement>(null)
+  const [familyId, setFamilyId] = useState<string | null>(null)
+  const [routeId, setRouteId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const panelRef = useRef<HTMLElement>(null),
+    resultsRef = useRef<HTMLDivElement>(null)
   const stationOptions = useMemo(
     () => explorerStations(index, stations),
     [index, stations],
@@ -94,9 +95,17 @@ export function ServiceExplorer({
         : [],
     [index, stations, scope, form.query, form.trainFilter],
   )
+  const families = useMemo(() => groupExplorerServices(services), [services])
+  const family = families.find((group) => group.id === familyId)
+  const route = family?.routes.find((group) => group.id === routeId)
+  const allowedSelection =
+    route?.services.some((trip) => trip.id === selectedId) === true
   const selected = useMemo(
-    () => (index && selectedId ? fullServiceJourney(index, selectedId) : null),
-    [index, selectedId],
+    () =>
+      index && allowedSelection && selectedId
+        ? fullServiceJourney(index, selectedId)
+        : null,
+    [index, allowedSelection, selectedId],
   )
   const segments = useMemo(
     () => (selected ? buildJourneySegments(selected, date) : []),
@@ -108,29 +117,40 @@ export function ServiceExplorer({
   )
   useEffect(() => {
     onPreview({
-      ids: selected
-        ? selected.legs[0].stops.map((stop) => stop.stationId)
-        : scopeStations.map((station) => station.id),
+      ids: selected ? selected.legs[0].stops.map((stop) => stop.stationId) : [],
       journey: selected,
-      overview: form.mode === 'all',
+      overview: !selected,
     })
-  }, [selected, scopeStations, form.mode, onPreview])
+  }, [selected, onPreview])
+  const scrollTop = () => panelRef.current?.scrollTo({ top: 0 })
   const update = (patch: Partial<typeof form>) => {
     setForm((previous) => ({ ...previous, ...patch }))
+    setFamilyId(null)
+    setRouteId(null)
     setSelectedId(null)
     setPage(0)
   }
-  const count = Math.max(1, Math.ceil(services.length / PAGE_SIZE))
-  const currentPage = Math.min(page, count - 1)
-  const visible = services.slice(
-    currentPage * PAGE_SIZE,
-    (currentPage + 1) * PAGE_SIZE,
-  )
-  const resetSelection = () => {
+  const resetRoute = () => {
+    setRouteId(null)
     setSelectedId(null)
-    panelRef.current?.scrollTo({ top: 0 })
+    scrollTop()
     onExpand()
   }
+  const resetFamily = () => {
+    setFamilyId(null)
+    setRouteId(null)
+    setSelectedId(null)
+    setPage(0)
+    scrollTop()
+    onExpand()
+  }
+  const count = Math.max(1, Math.ceil((family?.routes.length ?? 0) / PAGE_SIZE))
+  const currentPage = Math.min(page, count - 1)
+  const visibleRoutes =
+    family?.routes.slice(
+      currentPage * PAGE_SIZE,
+      (currentPage + 1) * PAGE_SIZE,
+    ) ?? []
   const changePage = (next: number) => {
     setPage(next)
     if (panelRef.current && resultsRef.current)
@@ -141,21 +161,20 @@ export function ServiceExplorer({
   return (
     <section
       ref={panelRef}
-      className={`service-explorer ${selected ? 'has-service' : ''}`}
+      className={`service-explorer ${family ? 'has-service' : ''}`}
       id="network-panel"
       role="tabpanel"
       aria-labelledby="network-tab"
     >
       <div className="service-explorer-heading">
-        <span className="eyebrow">철길을 따라 둘러보기</span>
-        <h2>열차의 처음부터 끝까지</h2>
+        <h2>어떤 열차로 둘러볼까요?</h2>
         <p>
           {sample
             ? '샘플 지도에서는 실제 운행 열차를 제공하지 않습니다.'
             : `${date.slice(0, 4)}.${date.slice(4, 6)}.${date.slice(6, 8)} 운행 기록 기준`}
         </p>
       </div>
-      <details className="service-scope-panel" open={!selected}>
+      <details className="service-scope-panel" open={!family}>
         <summary>
           <Icon name="map" size={16} />
           {form.mode === 'all'
@@ -225,28 +244,41 @@ export function ServiceExplorer({
             <input
               type="search"
               aria-label="운행 열차 검색"
-              placeholder="열차번호 · 차종 · 정차역 검색"
+              placeholder="정차역 · 열차 종류 · 열차번호"
               value={form.query}
               onChange={(event) => update({ query: event.target.value })}
             />
           </div>
-          <TrainTypeFilter
-            value={form.trainFilter}
-            types={index?.trainTypes ?? []}
-            onChange={(trainFilter) => update({ trainFilter })}
-            hint="수집된 전체 운행 열차에서 선택한 차종을 찾습니다."
-          />
+          <details className="service-advanced">
+            <summary>
+              상세 필터
+              <Icon name="chevron" size={14} />
+            </summary>
+            <TrainTypeFilter
+              value={form.trainFilter}
+              types={index?.trainTypes ?? []}
+              onChange={(trainFilter) => update({ trainFilter })}
+              hint="원하는 세부 차종이나 차종 미확인 포함 여부를 선택할 수 있어요."
+            />
+          </details>
         </div>
       </details>
-      <p className="service-explorer-note">
-        정차역을 이은 운행 경로입니다. 실제 선로 모양과 무정차 통과역은 표시하지
-        않습니다. 지도에는 선택한 열차 1편만 표시합니다.
-      </p>
-      {form.mode === 'region' && (
-        <p className="service-explorer-note">
-          지역 기준은 위치가 확인된 정차역으로 분류합니다.
+      <details className="service-display-guide">
+        <summary>
+          <Icon name="info" size={14} />
+          지도·열차 종류 안내
+          <Icon name="chevron" size={12} />
+        </summary>
+        <p>
+          차량 계열별로 묶어 보여드립니다. KTX 계열에는 이음·산천·청룡 등이
+          포함되며, 운영사는 개별 열차편에서 확인해 주세요. 지도에는 선택한 열차
+          1편의 정차역 연결 경로만 표시합니다. 실제 선로 모양이나 무정차
+          통과역은 표시하지 않습니다.
         </p>
-      )}
+        {form.mode === 'region' && (
+          <p>지역 기준은 위치가 확인된 정차역으로 분류합니다.</p>
+        )}
+      </details>
       {form.mode === 'station' &&
         loadState === 'ready' &&
         scopeStations.length === 0 && (
@@ -272,96 +304,163 @@ export function ServiceExplorer({
         <p className="service-explorer-status" role="status">
           운행 기록을 불러오고 있습니다.
         </p>
-      ) : selected ? (
-        <div className="service-full-route" aria-live="polite">
-          <JourneyResults
-            loadState="ready"
-            error=""
-            onRetry={onRetry}
-            requested
-            options={[selected]}
-            selectedIndex={0}
-            onChoose={() => {}}
-            segments={segments}
-            date={date}
-            onExpand={resetSelection}
-            mode="full-service"
-          />
-        </div>
       ) : (
-        <div className="service-results" aria-live="polite" ref={resultsRef}>
-          <p className="service-result-count">
-            조건에 맞는 총 {services.length}편
-            {services.length > 0 &&
-              ` · ${currentPage * PAGE_SIZE + 1}–${Math.min((currentPage + 1) * PAGE_SIZE, services.length)}번째`}
-          </p>
-          {form.mode === 'all' && (
-            <p className="service-explorer-note">
-              전국의 열차를 12편씩 보여드립니다. 열차를 선택하면 전체 운행
-              경로가 나타납니다.
-            </p>
-          )}
-          {!services.length && (
-            <div className="empty-state">
-              <Icon name="search" size={28} />
-              <h3>조건에 맞는 운행 기록이 없어요</h3>
-              <p>
-                역·지역·열차 종류나 검색어를 바꿔 보세요. 해당 역에 열차가
-                운행하지 않는다는 뜻은 아닙니다.
-              </p>
-            </div>
-          )}
-          {visible.map((trip) => (
-            <button
-              className="service-card"
-              key={trip.id}
-              onClick={() => {
-                setSelectedId(trip.id)
-                panelRef.current?.scrollTo({ top: 0 })
-                onInspect()
-              }}
-            >
-              <span className="service-card-train">
-                <Icon name="train" size={16} />
-                {trainTypeLabel(trip) ?? '차종 미제공'} {trip.trainNumber}호
-              </span>
-              <strong>
-                {stationLabel(trip.stops[0].name)}
-                <Icon name="arrow" size={16} />
-                {stationLabel(trip.stops.at(-1)!.name)}
-              </strong>
-              <span className="service-card-times">
-                {formatKoreaTime(parseKoreaTime(trip.stops[0].departure), date)}{' '}
-                →{' '}
-                {formatKoreaTime(
-                  parseKoreaTime(trip.stops.at(-1)!.arrival),
-                  date,
-                )}{' '}
-                · 정차역 {trip.stops.length}개
-              </span>
-              <span className="service-card-action">
-                전체 운행 경로 보기 <Icon name="arrow" size={14} />
-              </span>
-            </button>
-          ))}
-          {count > 1 && (
-            <nav className="service-pagination" aria-label="운행 열차 페이지">
-              <button
-                disabled={currentPage === 0}
-                onClick={() => changePage(currentPage - 1)}
-              >
-                이전
-              </button>
-              <span>
-                {currentPage + 1} / {count}
-              </span>
-              <button
-                disabled={currentPage + 1 >= count}
-                onClick={() => changePage(currentPage + 1)}
-              >
-                다음
-              </button>
+        <div className="service-results" ref={resultsRef}>
+          {family && (
+            <nav className="service-breadcrumbs" aria-label="노선 탐색 단계">
+              <button onClick={resetFamily}>열차 종류</button>
+              <Icon name="chevron" size={12} />
+              {selected ? (
+                <button onClick={resetRoute}>{family.label} 방면</button>
+              ) : (
+                <strong>{family.label}</strong>
+              )}
             </nav>
+          )}
+          {selected && route ? (
+            <div className="service-full-route" aria-live="polite">
+              <label className="service-departure-picker">
+                운행 열차 선택 · {route.services.length}편
+                <select
+                  aria-label="전체 경로 운행 열차 선택"
+                  value={selectedId ?? ''}
+                  onChange={(event) => {
+                    setSelectedId(event.target.value)
+                    scrollTop()
+                  }}
+                >
+                  {route.services.map((trip) => (
+                    <option key={trip.id} value={trip.id}>
+                      {formatKoreaTime(
+                        parseKoreaTime(trip.stops[0].departure),
+                        date,
+                      )}{' '}
+                      →{' '}
+                      {formatKoreaTime(
+                        parseKoreaTime(trip.stops.at(-1)!.arrival),
+                        date,
+                      )}{' '}
+                      · {trainTypeLabel(trip) ?? '차종 미제공'}{' '}
+                      {trip.trainNumber}호
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {route.patternCount > 1 && (
+                <p className="service-explorer-note">
+                  이 방면은 정차 패턴이 {route.patternCount}가지입니다. 선택한
+                  열차의 실제 정차역을 보여드립니다.
+                </p>
+              )}
+              <JourneyResults
+                loadState="ready"
+                error=""
+                onRetry={onRetry}
+                requested
+                options={[selected]}
+                selectedIndex={0}
+                onChoose={() => {}}
+                segments={segments}
+                date={date}
+                onExpand={resetRoute}
+                mode="full-service"
+              />
+            </div>
+          ) : (
+            <>
+              <p className="service-result-count" role="status">
+                {family
+                  ? `${family.label} · ${family.routes.length}개 방면 · 총 ${family.services.length}편`
+                  : `${families.length}개 열차 종류 · 총 ${services.length}편`}
+              </p>
+              {!services.length && (
+                <div className="empty-state">
+                  <Icon name="search" size={28} />
+                  <h3>조건에 맞는 운행 기록이 없어요</h3>
+                  <p>
+                    역·지역·열차 종류나 검색어를 바꿔 보세요. 해당 역에 열차가
+                    운행하지 않는다는 뜻은 아닙니다.
+                  </p>
+                </div>
+              )}
+              {!family && services.length > 0 && (
+                <p className="service-step-hint">
+                  열차 종류를 고른 뒤 원하는 방면을 선택하세요.
+                </p>
+              )}
+              {!family
+                ? families.map((group) => (
+                    <button
+                      className="service-family-card"
+                      key={group.id}
+                      aria-label={`${group.label} 경로 보기`}
+                      onClick={() => {
+                        setFamilyId(group.id)
+                        setPage(0)
+                        scrollTop()
+                      }}
+                    >
+                      <span className="service-family-symbol">
+                        <Icon name="train" size={23} />
+                      </span>
+                      <span>
+                        <strong>{group.label}</strong>
+                        <small>
+                          {group.routes.length}개 방면 · {group.services.length}
+                          편
+                        </small>
+                      </span>
+                      <Icon name="chevron" size={18} />
+                    </button>
+                  ))
+                : visibleRoutes.map((group) => (
+                    <button
+                      className="service-card service-route-card"
+                      key={group.id}
+                      onClick={() => {
+                        setRouteId(group.id)
+                        setSelectedId(group.services[0].id)
+                        scrollTop()
+                        onInspect()
+                      }}
+                    >
+                      <strong>
+                        {stationLabel(group.origin.name)}
+                        <Icon name="arrow" size={16} />
+                        {stationLabel(group.destination.name)}
+                      </strong>
+                      <span className="service-card-times">
+                        {group.services.length}편 · 정차 패턴{' '}
+                        {group.patternCount}가지
+                      </span>
+                      <span className="service-card-action">
+                        시간대·전체 경로 보기 <Icon name="arrow" size={14} />
+                      </span>
+                    </button>
+                  ))}
+              {family && count > 1 && (
+                <nav
+                  className="service-pagination"
+                  aria-label="운행 방면 페이지"
+                >
+                  <button
+                    disabled={currentPage === 0}
+                    onClick={() => changePage(currentPage - 1)}
+                  >
+                    이전
+                  </button>
+                  <span>
+                    {currentPage + 1} / {count}
+                  </span>
+                  <button
+                    disabled={currentPage + 1 >= count}
+                    onClick={() => changePage(currentPage + 1)}
+                  >
+                    다음
+                  </button>
+                </nav>
+              )}
+            </>
           )}
         </div>
       )}

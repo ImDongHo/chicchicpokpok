@@ -10,6 +10,7 @@ import type { KakaoMap, KakaoMaps, MapLayer } from '../kakao.ts'
 import { Icon } from './Icon.tsx'
 
 interface Props {
+  idleHint?: string
   selected: string | null
   scopeStations: Station[]
   overview: boolean
@@ -102,6 +103,7 @@ function fitMap(
 }
 
 export function RailMap({
+  idleHint,
   selected,
   scopeStations,
   overview,
@@ -544,7 +546,11 @@ export function RailMap({
               ? '지도 불러오는 중'
               : '철도망 미리보기'}
         </span>
-        <span className="map-count">현재 {mapStations.length}개 역 표시</span>
+        <span className="map-count">
+          {idleHint && !connection
+            ? '열차를 선택해 주세요'
+            : `현재 ${mapStations.length}개 역 표시`}
+        </span>
         {connection && endpoints && (
           <div
             className="map-endpoint-summary"
@@ -587,9 +593,10 @@ export function RailMap({
           ))
         ) : (
           <span>
-            {overview
-              ? '지도를 확대하거나 지역을 선택해 보세요'
-              : '역을 선택한 뒤 연결 경로를 살펴보세요'}
+            {idleHint ??
+              (overview
+                ? '지도를 확대하거나 지역을 선택해 보세요'
+                : '역을 선택한 뒤 연결 경로를 살펴보세요')}
           </span>
         )}
         {geometry.some((path) => path.transferGap) && (

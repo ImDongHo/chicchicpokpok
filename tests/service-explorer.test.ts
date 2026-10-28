@@ -11,6 +11,8 @@ import {
   explorerStations,
   findExplorerServices,
   scopedMapStations,
+  groupExplorerServices,
+  serviceFamily,
 } from '../src/lib/service-explorer.ts'
 import { buildJourneySegments } from '../src/lib/route-segments.ts'
 import { DEFAULT_TRAIN_FILTER } from '../src/lib/train-filter.ts'
@@ -96,6 +98,113 @@ const south = trip('01234', '무궁화호', [
   ['busan', '부산', '15:00'],
 ])
 const records = [north, south]
+
+test('family menu combines KTX and ITX variants once without guessing SRT from station names', () => {
+  const types = [
+    'KTX',
+    'KTX-산천(A-type)',
+    'KTX-산천(B-type)',
+    'KTX-이음',
+    'KTX-청룡',
+    'SRT',
+    'ITX-새마을',
+    'ITX-마음',
+    'ITX-청춘',
+    '무궁화호',
+    null,
+  ]
+  const trips = types.map((type, i) => ({
+    ...north,
+    id: `family${i}`,
+    trainType: type,
+  }))
+  const groups = groupExplorerServices(trips)
+  assert.deepEqual(
+    groups.map((group) => group.label),
+    ['KTX', 'SRT', 'ITX', '무궁화', '기타·미확인'],
+  )
+  assert.equal(groups[0].services.length, 5)
+  assert.equal(groups[0].routes.length, 1)
+  assert.equal(groups[2].services.length, 3)
+  assert.equal(serviceFamily('S수서'), 'unknown')
+  assert.equal(serviceFamily(null), 'unknown')
+  assert.equal(serviceFamily('KTX-산천(A-type)'), 'ktx')
+  assert.equal(
+    groups.reduce((total, group) => total + group.services.length, 0),
+    trips.length,
+  )
+})
+
+test('same-endpoint services become one menu item while every stopping pattern and timetable survives', () => {
+  const stopping = { ...north, id: 'stopping', trainType: 'KTX-이음' }
+  const express = {
+    ...north,
+    id: 'express',
+    trainType: 'KTX-산천(A-type)',
+    stops: north.stops.filter((stop) => stop.stationId !== 'daejeon'),
+  }
+  const anotherTime = structuredClone(north)
+  anotherTime.id = 'later'
+  anotherTime.stops = anotherTime.stops.map((stop) => ({
+    ...stop,
+    arrival: stop.arrival?.replace('2026-10-27', '2026-10-28') ?? null,
+    departure: stop.departure?.replace('2026-10-27', '2026-10-28') ?? null,
+  }))
+  const input = [anotherTime, express, stopping],
+    snapshot = structuredClone(input)
+  const [group] = groupExplorerServices(input)
+  assert.equal(group.routes.length, 1)
+  const [route] = group.routes
+  assert.equal(route.patternCount, 2)
+  assert.equal(route.services.at(-1), anotherTime)
+  const index = createTimetableIndex(input)
+  for (const original of input)
+    assert.deepEqual(
+      fullServiceJourney(index, original.id)!.legs[0].stops,
+      original.stops,
+    )
+  assert.deepEqual(input, snapshot)
+})
+
+test('grouping preserves direction and distinct endpoint IDs even when public names match', () => {
+  const reverse = { ...south, trainType: 'KTX' }
+  const otherEndpoint = {
+    ...north,
+    id: 'other-station',
+    stops: north.stops.map((stop, i) =>
+      i === 0 ? { ...stop, stationId: 'distinct-busan-id' } : stop,
+    ),
+  }
+  const [group] = groupExplorerServices([north, reverse, otherEndpoint])
+  assert.equal(group.routes.length, 3)
+  assert.equal(new Set(group.routes.map((route) => route.id)).size, 3)
+  assert.equal(group.routes.flatMap((route) => route.services).length, 3)
+})
+
+test('scoped search and exact type filters are applied before family and route grouping', () => {
+  const ieum = { ...north, id: 'ieum', trainType: 'KTX-이음' }
+  const index = createTimetableIndex([...records, ieum])
+  const filtered = findExplorerServices(index, mapped, {
+    scope: { mode: 'station', stationId: 'dongdaegu' },
+    trainFilter: {
+      category: 'high-speed',
+      types: ['KTX-이음'],
+      includeUnknown: false,
+    },
+  })
+  const [group] = groupExplorerServices(filtered)
+  assert.equal(group.label, 'KTX')
+  assert.deepEqual(group.routes[0].services, [ieum])
+  assert.deepEqual(
+    groupExplorerServices(
+      findExplorerServices(index, mapped, {
+        scope: { mode: 'all' },
+        query: '없는역',
+      }),
+    ),
+    [],
+  )
+})
 
 test('station exploration finds complete services at origin, intermediate, terminal and unmapped stops', () => {
   const index = createTimetableIndex(records)

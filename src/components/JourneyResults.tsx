@@ -132,7 +132,7 @@ export function JourneyResults({
         {filterLabel && <p>열차 종류: {filterLabel}</p>}
         <button className="edit-journey-button" onClick={onExpand}>
           {mode === 'full-service'
-            ? '다른 운행 열차 보기'
+            ? '다른 방면 보기'
             : '열차·출발 시각·정렬 변경'}
         </button>
       </div>
