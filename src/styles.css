@@ -51,13 +51,15 @@ button:disabled {
 button,
 a,
 input,
-select {
+select,
+summary {
   outline-offset: 4px;
 }
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 select:focus-visible,
+summary:focus-visible,
 [role='button']:focus-visible {
   outline: 3px solid #b7791f;
 }
@@ -81,9 +83,8 @@ button:focus:not(:focus-visible) {
   outline: none;
 }
 .app-shell {
-  height: 100dvh;
-  min-height: 600px;
-  overflow: hidden;
+  min-height: 100dvh;
+  overflow: visible;
 }
 .topbar {
   height: 84px;
@@ -149,7 +150,7 @@ button:focus:not(:focus-visible) {
 .workspace {
   display: flex;
   height: calc(100dvh - 84px);
-  min-height: 516px;
+  min-height: 0;
   position: relative;
 }
 .sidebar {
@@ -164,7 +165,7 @@ button:focus:not(:focus-visible) {
   min-height: 0;
 }
 .sidebar-heading {
-  padding: 30px 27px 24px;
+  padding: 18px 27px 20px;
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
@@ -185,13 +186,18 @@ button:focus:not(:focus-visible) {
   background: #86703f;
 }
 .sidebar-heading h1 {
-  margin-top: 14px;
-  font-size: 29px;
+  margin-top: 8px;
+  font-size: 24px;
   letter-spacing: -1.6px;
-  line-height: 1.48;
+  line-height: 1.3;
   font-weight: 800;
   position: relative;
   z-index: 1;
+  white-space: nowrap;
+}
+.sidebar-heading > p,
+.sidebar-heading > .heading-train {
+  display: none;
 }
 .sidebar-heading h1 > span {
   color: #86703f;
@@ -287,6 +293,11 @@ button:focus:not(:focus-visible) {
   flex-shrink: 0;
   overflow-x: auto;
   scrollbar-width: none;
+}
+.region-chips-wrap {
+  position: relative;
+  flex-shrink: 0;
+  min-width: 0;
 }
 .region-chips button {
   white-space: nowrap;
@@ -522,6 +533,7 @@ button:focus:not(:focus-visible) {
   height: 100%;
   position: relative;
   overflow: hidden;
+  container-type: size;
 }
 .preview-map {
   display: block;
@@ -572,6 +584,7 @@ button:focus:not(:focus-visible) {
   fill: #bad0ac;
 }
 .map-heading {
+  anchor-name: --map-heading;
   position: absolute;
   top: 25px;
   left: 27px;
@@ -874,6 +887,43 @@ button:focus:not(:focus-visible) {
 .route-form {
   padding: 0 27px;
   flex-shrink: 0;
+}
+.route-options {
+  margin-top: 10px;
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+}
+.route-options > summary,
+.route-note > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12px;
+  color: var(--green);
+}
+.route-options > summary::-webkit-details-marker,
+.route-note > summary::-webkit-details-marker {
+  display: none;
+}
+.route-options > summary {
+  padding: 10px 12px;
+}
+.route-options > summary small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.route-options > summary > svg,
+.route-note > summary > svg:last-child {
+  margin-left: auto;
+}
+.route-options[open] > summary > svg,
+.route-note[open] > summary > svg:last-child {
+  transform: rotate(90deg);
+}
+.route-options-body {
+  padding: 0 10px 8px;
 }
 .journey-preference {
   display: flex;
@@ -1253,7 +1303,7 @@ button:focus:not(:focus-visible) {
 }
 .route-results {
   flex: 1 0 auto;
-  min-height: 0;
+  min-height: 320px;
   overflow: visible;
   padding: 20px 29px;
   scrollbar-width: thin;
@@ -1284,9 +1334,7 @@ button:focus:not(:focus-visible) {
   margin-top: 10px;
 }
 .route-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  display: block;
   font-size: 11px;
   line-height: 1.8;
   color: var(--text-muted);
@@ -1297,9 +1345,11 @@ button:focus:not(:focus-visible) {
   margin: 0 26px 17px;
   flex-shrink: 0;
 }
-.route-note > svg {
+.route-note > summary > svg {
   flex-shrink: 0;
-  margin-top: 2px;
+}
+.route-note > p {
+  margin-top: 10px;
 }
 .connection-heading {
   padding: 3px 0 23px;
@@ -1448,9 +1498,6 @@ button:focus:not(:focus-visible) {
     gap: 6px;
     padding: 7px 9px;
   }
-  .map-area.showing-route .mobile-selection {
-    top: 115px;
-  }
 }
 .live-station.dim {
   opacity: 0.35;
@@ -1461,11 +1508,11 @@ button:focus:not(:focus-visible) {
     width: 410px;
   }
   .sidebar-heading {
-    padding-top: 38px;
-    padding-bottom: 30px;
+    padding-top: 18px;
+    padding-bottom: 20px;
   }
   .sidebar-heading h1 {
-    font-size: 32px;
+    font-size: 24px;
   }
   .station-main {
     padding-top: 12px;
@@ -1485,7 +1532,7 @@ button:focus:not(:focus-visible) {
     padding-bottom: 18px;
   }
   .sidebar-heading h1 {
-    font-size: 25px;
+    font-size: 24px;
     line-height: 1.35;
     margin-top: 10px;
   }
@@ -1563,8 +1610,7 @@ button:focus:not(:focus-visible) {
 }
 @media (max-width: 760px) {
   .app-shell {
-    height: 100dvh;
-    min-height: 520px;
+    min-height: 100dvh;
   }
   .topbar {
     height: 67px;
@@ -1602,7 +1648,7 @@ button:focus:not(:focus-visible) {
   }
   .workspace {
     height: calc(100dvh - 67px);
-    min-height: 453px;
+    min-height: 0;
     display: block;
   }
   .sidebar {
@@ -1618,6 +1664,10 @@ button:focus:not(:focus-visible) {
     box-shadow: 0 -4px 28px #35503f17;
     transition: height 0.3s ease;
     z-index: 4;
+  }
+  .sidebar.planning {
+    height: 68%;
+    min-height: min(480px, calc(100% - 72px));
   }
   .sidebar.expanded {
     height: 88%;
@@ -1659,6 +1709,16 @@ button:focus:not(:focus-visible) {
   .region-chips {
     padding: 12px 20px;
     gap: 7px;
+  }
+  .region-chips-wrap::after {
+    content: '';
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    right: 0;
+    width: 28px;
+    background: linear-gradient(90deg, #ffffff00, #fff);
+    pointer-events: none;
   }
   .region-chips button {
     font-size: 12px;
@@ -1717,9 +1777,24 @@ button:focus:not(:focus-visible) {
     height: 100%;
   }
   .map-heading {
-    left: 15px;
-    top: 15px;
-    gap: 8px;
+    left: 12px;
+    top: 12px;
+    gap: 6px;
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    max-width: calc(100% - 144px);
+  }
+  .map-endpoint-summary {
+    grid-column: 1 / -1;
+  }
+  .map-area.showing-route .map-tag,
+  .map-area.showing-route .map-count,
+  .sidebar.expanded ~ .map-area .map-tag,
+  .sidebar.expanded ~ .map-area .map-count {
+    display: none;
+  }
+  .sidebar.expanded ~ .map-area .mobile-selection {
+    display: none;
   }
   .map-tag {
     font-size: 11px;
@@ -1728,22 +1803,28 @@ button:focus:not(:focus-visible) {
   }
   .map-count {
     font-size: 11px;
+    white-space: nowrap;
   }
   .map-controls {
-    right: 14px;
-    top: 15px;
+    right: 12px;
+    top: 12px;
     border-radius: 7px;
+    flex-direction: row;
   }
   .map-controls button {
-    width: 32px;
-    height: 33px;
+    width: 34px;
+    height: 36px;
+  }
+  .map-controls button + button {
+    border-top: 0;
+    border-left: 1px solid var(--ui-border);
   }
   .map-controls svg {
     width: 17px;
     height: 17px;
   }
   .map-legend {
-    bottom: 38px;
+    bottom: 70px;
     padding: 8px 10px;
     gap: 9px;
     border-radius: 6px;
@@ -1757,7 +1838,7 @@ button:focus:not(:focus-visible) {
     height: 2px;
   }
   .map-caption {
-    bottom: 22px;
+    bottom: 10px;
     font-size: 11px;
   }
   .selected-station-panel {
@@ -1766,8 +1847,8 @@ button:focus:not(:focus-visible) {
   .mobile-selection {
     position: absolute;
     z-index: 2;
-    top: 65px;
-    left: 15px;
+    top: 62px;
+    left: 12px;
     display: flex;
     align-items: center;
     gap: 7px;
@@ -1777,6 +1858,9 @@ button:focus:not(:focus-visible) {
     border-radius: 9px;
     box-shadow: 0 3px 9px #425b3710;
     max-width: calc(100% - 76px);
+  }
+  .map-area.showing-route .mobile-selection {
+    top: 96px;
   }
   .mobile-selection > span {
     display: flex;
@@ -1875,6 +1959,70 @@ button:focus:not(:focus-visible) {
   }
   .empty-state p {
     font-size: 11px;
+  }
+}
+/* SVG viewBox scaling must not shrink preview labels below 11px at 0.8x zoom. */
+@supports (font-size: calc(14px * max(760px / 100cqw, 820px / 100cqh))) {
+  .preview-map {
+    --preview-font-scale: max(calc(760px / 100cqw), calc(820px / 100cqh));
+  }
+  .preview-map .map-station text,
+  .preview-map .region-labels text {
+    font-size: calc(14px * var(--preview-font-scale));
+  }
+  .preview-map .map-station.selected text {
+    font-size: calc(16px * var(--preview-font-scale));
+  }
+}
+@supports (top: anchor(bottom)) {
+  @media (max-width: 760px) {
+    .mobile-selection,
+    .map-area.showing-route .mobile-selection {
+      top: calc(anchor(--map-heading bottom) + 8px);
+    }
+  }
+}
+@media (max-height: 700px) {
+  .workspace {
+    min-height: 520px;
+  }
+  .sidebar-heading {
+    padding: 12px 22px;
+  }
+  .sidebar-heading h1 {
+    font-size: 22px;
+    margin-top: 6px;
+  }
+  .station-main {
+    min-height: 64px;
+    padding: 8px 13px;
+  }
+  .region-chips {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .region-chips button {
+    padding: 7px 12px;
+  }
+  .tabs {
+    margin-bottom: 10px;
+  }
+  .tabs button {
+    padding: 6px 4px;
+  }
+}
+@media (max-height: 700px) and (max-width: 760px) {
+  .workspace {
+    min-height: 480px;
+  }
+  .region-chips-wrap::after {
+    top: 10px;
+    bottom: 10px;
+  }
+}
+@media (max-height: 600px) and (max-width: 760px) {
+  .sidebar.planning ~ .map-area .mobile-selection {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -279,9 +279,7 @@ export default function App() {
               <span /> LET’S GO BY TRAIN
             </span>
             <h1>
-              기차 타고,
-              <br />
-              어디로 떠나볼까요<span>?</span>
+              기차 타고 떠나볼까요<span>?</span>
             </h1>
             <p>지도를 펼치면, 새로운 여행이 시작돼요.</p>
             <Icon name="train" size={86} className="heading-train" />
@@ -358,20 +356,22 @@ export default function App() {
                   </button>
                 )}
               </div>
-              <div className="region-chips" aria-label="지역 필터">
-                {regions.map((value) => (
-                  <button
-                    key={value}
-                    aria-pressed={region === value}
-                    className={region === value ? 'active' : ''}
-                    onClick={() => {
-                      setRegion(value)
-                      setSelected(null)
-                    }}
-                  >
-                    {value}
-                  </button>
-                ))}
+              <div className="region-chips-wrap">
+                <div className="region-chips" aria-label="지역 필터">
+                  {regions.map((value) => (
+                    <button
+                      key={value}
+                      aria-pressed={region === value}
+                      className={region === value ? 'active' : ''}
+                      onClick={() => {
+                        setRegion(value)
+                        setSelected(null)
+                      }}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="results-heading">
                 <h2>
@@ -593,85 +593,92 @@ export default function App() {
                         검색에서 제외했습니다.
                       </p>
                     )}
-                    <div className="route-time-fields">
-                      <label>
-                        출발 시각 이후
-                        <input
-                          type="time"
-                          aria-label="출발 시각 이후"
-                          value={departureTime}
-                          onChange={(event) => {
-                            setDepartureTime(event.target.value)
-                            setRequest(null)
-                          }}
-                          required
-                        />
-                      </label>
-                      <label>
-                        최소 환승 여유
-                        <select
-                          aria-label="최소 환승 여유"
-                          value={transferMinutes}
-                          onChange={(event) => {
-                            setTransferMinutes(Number(event.target.value))
-                            setRequest(null)
-                          }}
-                        >
-                          <option value={10}>10분</option>
-                          <option value={20}>20분</option>
-                          <option value={30}>30분</option>
-                        </select>
-                      </label>
-                    </div>
                   </>
                 )}
                 {!isSampleData && (
-                  <>
-                    <div
-                      className="journey-preference"
-                      role="group"
-                      aria-label="경로 정렬 기준"
-                    >
-                      {(
-                        [
-                          { value: 'fastest', label: '빠른 도착' },
-                          { value: 'fewest-transfers', label: '적은 환승' },
-                        ] as const
-                      ).map((option) => (
-                        <button
-                          type="button"
-                          key={option.value}
-                          aria-pressed={preference === option.value}
-                          onClick={() => {
-                            setPreference(option.value)
-                            setJourneyChoice(0)
-                            setRequest((previous) =>
-                              previous
-                                ? { ...previous, preference: option.value }
-                                : null,
-                            )
-                          }}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="preference-hint">
-                      {preference === 'fastest'
-                        ? '요청 시각 이후 가장 빨리 도착하는 편을 비교합니다.'
-                        : '환승 횟수를 먼저, 같은 횟수에서는 빠른 도착을 비교합니다.'}
-                    </p>
-                    {request?.maxDurationMinutes && (
+                  <details className="route-options">
+                    <summary>
+                      상세 옵션
+                      <small>시간 · 환승 · 정렬</small>
+                      <Icon name="chevron" size={16} />
+                    </summary>
+                    <div className="route-options-body">
+                      <div className="route-time-fields">
+                        <label>
+                          출발 시각 이후
+                          <input
+                            type="time"
+                            aria-label="출발 시각 이후"
+                            value={departureTime}
+                            onChange={(event) => {
+                              setDepartureTime(event.target.value)
+                              setRequest(null)
+                            }}
+                            required
+                          />
+                        </label>
+                        <label>
+                          최소 환승 여유
+                          <select
+                            aria-label="최소 환승 여유"
+                            value={transferMinutes}
+                            onChange={(event) => {
+                              setTransferMinutes(Number(event.target.value))
+                              setRequest(null)
+                            }}
+                          >
+                            <option value={10}>10분</option>
+                            <option value={20}>20분</option>
+                            <option value={30}>30분</option>
+                          </select>
+                        </label>
+                      </div>
+                      <div
+                        className="journey-preference"
+                        role="group"
+                        aria-label="경로 정렬 기준"
+                      >
+                        {(
+                          [
+                            { value: 'fastest', label: '빠른 도착' },
+                            { value: 'fewest-transfers', label: '적은 환승' },
+                          ] as const
+                        ).map((option) => (
+                          <button
+                            type="button"
+                            key={option.value}
+                            aria-pressed={preference === option.value}
+                            onClick={() => {
+                              setPreference(option.value)
+                              setJourneyChoice(0)
+                              setRequest((previous) =>
+                                previous
+                                  ? { ...previous, preference: option.value }
+                                  : null,
+                              )
+                            }}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
                       <p className="preference-hint">
-                        추천 조건: 편도 {request.maxDurationMinutes / 60}시간
-                        이내 · 환승 {request.maxTransfers ?? 2}회까지
-                        {request.latestArrivalTime
-                          ? ` · ${request.latestArrivalTime}까지 도착`
-                          : ''}
-                        . 다시 검색하면 추천 조건이 해제됩니다.
+                        {preference === 'fastest'
+                          ? '요청 시각 이후 가장 빨리 도착하는 편을 비교합니다.'
+                          : '환승 횟수를 먼저, 같은 횟수에서는 빠른 도착을 비교합니다.'}
                       </p>
-                    )}
-                  </>
+                      {request?.maxDurationMinutes && (
+                        <p className="preference-hint">
+                          추천 조건: 편도 {request.maxDurationMinutes / 60}시간
+                          이내 · 환승 {request.maxTransfers ?? 2}회까지
+                          {request.latestArrivalTime
+                            ? ` · ${request.latestArrivalTime}까지 도착`
+                            : ''}
+                          . 다시 검색하면 추천 조건이 해제됩니다.
+                        </p>
+                      )}
+                    </div>
+                  </details>
                 )}
                 <button
                   className="primary-button"
@@ -790,14 +797,18 @@ export default function App() {
                   </div>
                 )}
               </div>
-              <p className="route-note">
-                <Icon name="info" size={16} />
-                <span>
+              <details className="route-note">
+                <summary>
+                  <Icon name="info" size={16} />
+                  운행 기록 안내
+                  <Icon name="chevron" size={16} />
+                </summary>
+                <p>
                   {isSampleData
                     ? '샘플 철도망입니다. 실제 탑승 열차나 환승 시간표가 아닙니다.'
                     : '표시된 날짜의 운행 기록입니다. 좌표가 없는 정차역도 목록에 보존하며, 위치 미확인 중간역을 포함한 지도 구간은 옅은 점선으로 연결합니다. 좌석·운행 변경·실제 환승 가능 여부는 코레일에서 확인해 주세요.'}
-                </span>
-              </p>
+                </p>
+              </details>
             </section>
           ) : (
             <DiscoveryPanel
