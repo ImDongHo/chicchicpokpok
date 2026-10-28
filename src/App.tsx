@@ -5,6 +5,9 @@ import { Icon } from './components/Icon.tsx'
 import { RailMap } from './components/RailMap.tsx'
 import { JourneyResults } from './components/JourneyResults.tsx'
 import { DiscoveryPanel } from './components/DiscoveryPanel.tsx'
+import { TrainTypeFilter } from './components/TrainTypeFilter.tsx'
+import { DEFAULT_TRAIN_FILTER, trainFilterLabel } from './lib/train-filter.ts'
+import type { TrainFilter } from './lib/train-filter.ts'
 import type { JourneyPreference } from './types.ts'
 import type { JourneySearchOptions } from './lib/timetable.ts'
 import { StationDescription } from './components/StationDescription.tsx'
@@ -76,6 +79,8 @@ export default function App() {
   }, [])
   const [departureTime, setDepartureTime] = useState('00:00')
   const [transferMinutes, setTransferMinutes] = useState(10)
+  const [trainFilter, setTrainFilter] =
+    useState<TrainFilter>(DEFAULT_TRAIN_FILTER)
   const [timetable, setTimetable] = useState<TimetableIndex | null>(null)
   const [loadState, setLoadState] = useState<
     'idle' | 'loading' | 'ready' | 'error'
@@ -220,6 +225,7 @@ export default function App() {
     setDepartureTime(options.earliestTime ?? '00:00')
     setTransferMinutes(options.minTransferMinutes ?? 10)
     setPreference(options.preference ?? 'fastest')
+    setTrainFilter(options.trainFilter ?? DEFAULT_TRAIN_FILTER)
     setJourneyChoice(0)
     setRequest({ ...options, from, to })
     setSelected(null)
@@ -522,6 +528,7 @@ export default function App() {
                     earliestTime: departureTime,
                     minTransferMinutes: transferMinutes,
                     preference,
+                    trainFilter,
                   })
                   setSelected(stationById.has(arrival) ? arrival : null)
                 }}
@@ -597,6 +604,17 @@ export default function App() {
                       </p>
                     )}
                   </>
+                )}
+                {!isSampleData && (
+                  <TrainTypeFilter
+                    value={trainFilter}
+                    types={timetable?.trainTypes ?? []}
+                    onChange={(value) => {
+                      setTrainFilter(value)
+                      setJourneyChoice(0)
+                      setRequest(null)
+                    }}
+                  />
                 )}
                 {!isSampleData && (
                   <details className="route-options">
@@ -712,6 +730,11 @@ export default function App() {
                     onChoose={setJourneyChoice}
                     segments={connectionSegments}
                     date={dataDate}
+                    filterLabel={
+                      request?.trainFilter
+                        ? trainFilterLabel(request.trainFilter)
+                        : undefined
+                    }
                     onExpand={() => setSheetExpanded(true)}
                   />
                 ) : request && connection ? (

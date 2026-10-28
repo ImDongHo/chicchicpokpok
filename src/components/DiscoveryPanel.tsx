@@ -6,6 +6,8 @@ import type { TimetableIndex, JourneySearchOptions } from "../lib/timetable.ts";
 import type { DestinationRecommendation } from "../lib/recommendations.ts";
 import { Icon } from "./Icon.tsx";
 import { DestinationCard } from "./DestinationCard.tsx";
+import { TrainTypeFilter } from "./TrainTypeFilter.tsx";
+import { DEFAULT_TRAIN_FILTER, trainFilterLabel } from "../lib/train-filter.ts";
 
 interface Props {
   stations: Station[];
@@ -84,6 +86,7 @@ export function DiscoveryPanel({
     duration: 180,
     transfers: 1,
     roundTrip: true,
+    trainFilter: DEFAULT_TRAIN_FILTER,
   });
   const [results, setResults] = useState<DestinationRecommendation[] | null>(
     null,
@@ -259,6 +262,7 @@ export function DiscoveryPanel({
           requireReturn: form.roundTrip,
           minStayMinutes: 120,
           homeBy: "23:00",
+          trainFilter: form.trainFilter,
         },
       });
     } catch {
@@ -294,7 +298,7 @@ export function DiscoveryPanel({
               stations.find((station) => station.id === from)?.name ??
                 "출발역 선택",
             )}{" "}
-            · {form.duration / 60}시간 이내
+            · {form.duration / 60}시간 이내 · {trainFilterLabel(form.trainFilter)}
           </small>
           <Icon name="chevron" size={16} />
         </summary>
@@ -366,6 +370,11 @@ export function DiscoveryPanel({
               <option value={1}>환승 1회까지 · 여유 10분</option>
             </select>
           </label>
+          <TrainTypeFilter
+            value={form.trainFilter}
+            types={index?.trainTypes ?? []}
+            onChange={(trainFilter) => update({ trainFilter })}
+          />
           <label className="roundtrip-toggle">
             <input
               type="checkbox"
@@ -444,7 +453,7 @@ export function DiscoveryPanel({
             <p className="discovery-result-count">
               {results.length
                 ? `조건에 맞는 총 ${results.length}개 지역${destinationQuery.trim() ? ` · 검색 ${filteredResults.length}개` : ""}`
-                : "조건에 맞는 지역을 확인하지 못했어요. 시간·환승·귀가 조건을 변경해 보세요."}
+                : "조건에 맞는 지역을 확인하지 못했어요. 시간·환승·열차 종류·귀가 조건을 변경해 보세요."}
               {filteredResults.length > 0 && (
                 <span className="discovery-page-range">
                   {" "}

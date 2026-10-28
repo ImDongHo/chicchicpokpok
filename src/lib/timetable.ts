@@ -6,6 +6,8 @@ import type {
   JourneyPreference,
 } from '../types.ts'
 import { hasUnconfirmedOperator } from './train-labels.ts'
+import { matchesTrainFilter } from './train-filter.ts'
+import type { TrainFilter } from './train-filter.ts'
 const koreaFormatter = new Intl.DateTimeFormat('ko-KR', {
   timeZone: 'Asia/Seoul',
   hour: '2-digit',
@@ -56,13 +58,15 @@ interface Boarding {
 export interface TimetableIndex {
   departures: Map<string, Boarding[]>
   stationNames: Map<string, string>
+  trainTypes: string[]
   tripCount: number
   excludedTripCount: number
 }
 
 export function createTimetableIndex(trips: TrainTrip[]): TimetableIndex {
   const departures = new Map<string, Boarding[]>(),
-    stationNames = new Map<string, string>()
+    stationNames = new Map<string, string>(),
+    trainTypes = new Set<string>()
   let tripCount = 0
   for (const trip of trips) {
     const service: IndexedTrip = {
@@ -90,6 +94,7 @@ export function createTimetableIndex(trips: TrainTrip[]): TimetableIndex {
     }
     if (!verified) continue
     tripCount++
+    if (trip.trainType?.trim()) trainTypes.add(trip.trainType.trim())
     for (let position = 0; position < trip.stops.length; position++) {
       const stop = trip.stops[position]
       stationNames.set(stop.stationId, stop.name)
@@ -113,6 +118,7 @@ export function createTimetableIndex(trips: TrainTrip[]): TimetableIndex {
   return {
     departures,
     stationNames,
+    trainTypes: [...trainTypes],
     tripCount,
     excludedTripCount: trips.length - tripCount,
   }
@@ -139,6 +145,7 @@ export interface JourneySearchOptions {
   preference?: JourneyPreference
   maxDurationMinutes?: number
   latestArrivalTime?: string
+  trainFilter?: TrainFilter
 }
 
 function startingTime(date: string, time: string): number | null {
@@ -277,6 +284,13 @@ function searchJourneys(
           const boarding = entries[i]
           if (depth === 1 && boarding.departure >= midnight + 86400000) break
           if (boarding.departure > lastArrival) break
+          if (
+            !matchesTrainFilter(
+              boarding.service.trip.trainType,
+              options.trainFilter,
+            )
+          )
+            continue
           if (
             label.legs.some(
               (leg) => leg.service.trip.id === boarding.service.trip.id,

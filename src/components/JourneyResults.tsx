@@ -22,6 +22,7 @@ interface Props {
   onChoose: (index: number) => void
   segments: ConnectionSegment[]
   date: string
+  filterLabel?: string
   onExpand: () => void
 }
 
@@ -35,6 +36,7 @@ export function JourneyResults({
   onChoose,
   segments,
   date,
+  filterLabel,
   onExpand,
 }: Props) {
   const selected = options[selectedIndex] ?? options[0]
@@ -77,9 +79,10 @@ export function JourneyResults({
         <Icon name="route" size={32} />
         <h3>확인 가능한 열차편이 없어요</h3>
         <p>
-          이 자료 날짜·출발 시각·환승 조건에서 확인한 결과입니다. 실제 운행이
-          없다는 뜻은 아니므로 최신 시간표도 확인해 주세요.
+          이 자료 날짜·출발 시각·환승·열차 종류 조건에서 확인한 결과입니다. 실제
+          운행이 없다는 뜻은 아니므로 최신 시간표도 확인해 주세요.
         </p>
+        {filterLabel && <p>열차 종류: {filterLabel}</p>}
       </div>
     )
   const transfers = selected.legs.length - 1
@@ -107,6 +110,7 @@ export function JourneyResults({
           구간 정차역 {stops.length}개
         </p>
         <p>열차편에 따라 오송 등 중간 정차역이 달라질 수 있습니다.</p>
+        {filterLabel && <p>열차 종류: {filterLabel}</p>}
         <button className="edit-journey-button" onClick={onExpand}>
           열차·출발 시각·정렬 변경
         </button>

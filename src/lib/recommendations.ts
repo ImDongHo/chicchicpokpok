@@ -5,6 +5,7 @@ import {
   parseKoreaTime,
 } from './timetable.ts'
 import type { JourneySearchOptions, TimetableIndex } from './timetable.ts'
+import type { TrainFilter } from './train-filter.ts'
 
 export interface DiscoveryOptions {
   date: string
@@ -16,6 +17,7 @@ export interface DiscoveryOptions {
   minStayMinutes?: number
   homeBy?: string
   limit?: number
+  trainFilter?: TrainFilter
 }
 export interface DestinationRecommendation {
   city: string
@@ -71,6 +73,7 @@ export function recommendDestinations(
     maxDurationMinutes: options.maxDurationMinutes,
     maxTransfers: options.maxTransfers,
     minTransferMinutes: options.minTransferMinutes,
+    ...(options.trainFilter ? { trainFilter: options.trainFilter } : {}),
     ...(options.requireReturn ? { latestArrivalTime: homeBy } : {}),
   }
   const originCity = stationCity(origin).key
