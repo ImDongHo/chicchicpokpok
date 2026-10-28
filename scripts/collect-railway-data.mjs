@@ -301,7 +301,17 @@ export function transformData(stationRows, planRows, stopRows, date) {
       sorted[0].trn_clsf_nm ??
       sorted[0].trn_kind_nm ??
       null
-    trips.push({ id, date, trainNumber: String(plan.trn_no), trainType, stops })
+    trips.push({
+      id,
+      date,
+      trainNumber: String(plan.trn_no),
+      trainType,
+      stops,
+      plannedDeparture:
+        plan.trn_plan_dptre_dt == null ? null : String(plan.trn_plan_dptre_dt),
+      plannedArrival:
+        plan.trn_plan_arvl_dt == null ? null : String(plan.trn_plan_arvl_dt),
+    })
     const ids = stops
       .filter((stop) => !stop.stationId.startsWith('unmapped:'))
       .map((stop) => stop.stationId)
@@ -433,6 +443,16 @@ export async function main() {
         verified: !!trip.timetableVerified,
         from: trip.stops[0].name,
         to: trip.stops.at(-1).name,
+        recordedDeparture: trip.stops[0].departure,
+        recordedArrival: trip.stops.at(-1).arrival,
+        plannedDeparture: trip.plannedDeparture,
+        plannedArrival: trip.plannedArrival,
+        tago: tago.services
+          .filter(
+            (service) =>
+              Number(service.trainNumber) === Number(trip.trainNumber),
+          )
+          .slice(0, 2),
       }))
     console.log(
       `::notice title=TAGO service examples::${JSON.stringify(examples).replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A')}`,

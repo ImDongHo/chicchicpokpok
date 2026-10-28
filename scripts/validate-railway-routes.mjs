@@ -52,9 +52,18 @@ async function main() {
       assert.equal(proof.date, date)
       assert.equal(
         parseKoreaTime(proof.departure),
-        parseKoreaTime(trip.stops[0].departure),
+        parseKoreaTime(
+          proof.timingBasis === 'planned'
+            ? trip.plannedDeparture
+            : trip.stops[0].departure,
+        ),
       )
-      assert.equal(parseKoreaTime(proof.arrival), parseKoreaTime(last.arrival))
+      assert.equal(
+        parseKoreaTime(proof.arrival),
+        parseKoreaTime(
+          proof.timingBasis === 'planned' ? trip.plannedArrival : last.arrival,
+        ),
+      )
       assert.ok(
         official.has(
           keyOf({

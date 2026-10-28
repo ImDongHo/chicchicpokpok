@@ -164,7 +164,17 @@ export function serviceQuery(trip, lookup) {
   const from = lookup.get(normalizeStationName(first.name)),
     to = lookup.get(normalizeStationName(last.name))
   if (!from || !to || from === to) return null
-  return { from, to, first, last }
+  const planned =
+    last === trip.stops.at(-1) && trip.plannedDeparture && trip.plannedArrival
+  return {
+    from,
+    to,
+    first,
+    last,
+    departure: planned ? trip.plannedDeparture : first.departure,
+    arrival: planned ? trip.plannedArrival : last.arrival,
+    timingBasis: planned ? 'planned' : 'recorded',
+  }
 }
 
 export function parseServices(
@@ -231,8 +241,8 @@ export function matchService(trip, query, services) {
       row.trainNumber === trainNumber(trip.trainNumber) &&
       row.from === query.from &&
       row.to === query.to &&
-      parseKoreaTime(row.departure) === parseKoreaTime(query.first.departure) &&
-      parseKoreaTime(row.arrival) === parseKoreaTime(query.last.arrival),
+      parseKoreaTime(row.departure) === parseKoreaTime(query.departure) &&
+      parseKoreaTime(row.arrival) === parseKoreaTime(query.arrival),
   )
   const types = new Set(matches.map((row) => row.trainType))
   if (types.size !== 1) return null
@@ -323,6 +333,7 @@ export async function collectTago(trips, date, key, fetcher = fetch) {
         to: query.to,
         departure: service.departure,
         arrival: service.arrival,
+        timingBasis: query.timingBasis,
       },
     }
   })

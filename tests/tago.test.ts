@@ -260,3 +260,34 @@ test('TAGO error handling never prints authenticated URLs, keys or upstream exce
     (error: Error) => !error.message.includes(key),
   )
 })
+
+test('planned endpoint times identify the same service while recorded delay times stay unchanged', () => {
+  const delayed = {
+    ...trip,
+    plannedDeparture: trip.stops[0].departure,
+    plannedArrival: trip.stops[2].arrival,
+    stops: [
+      { ...trip.stops[0], departure: '2026-10-28 05:08:00' },
+      trip.stops[1],
+      { ...trip.stops[2], arrival: '2026-10-28 07:09:00' },
+    ],
+  }
+  const rows = parseServices([row], query, trip.date)
+  const plannedQuery = serviceQuery(delayed, stationLookup(stations))!
+  assert.equal(plannedQuery.timingBasis, 'planned')
+  assert.equal(matchService(delayed, plannedQuery, rows)?.trainType, 'KTX-이음')
+  assert.equal(delayed.stops[0].departure, '2026-10-28 05:08:00')
+  const withoutPlan = {
+    ...delayed,
+    plannedDeparture: null,
+    plannedArrival: null,
+  }
+  assert.equal(
+    matchService(
+      withoutPlan,
+      serviceQuery(withoutPlan, stationLookup(stations))!,
+      rows,
+    ),
+    null,
+  )
+})
