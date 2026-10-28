@@ -1,5 +1,6 @@
 import type { ConnectionSegment, Journey, RailLine } from '../types.ts'
 import { formatKoreaTime } from './timetable.ts'
+import { trainTypeLabel } from './train-labels.ts'
 
 const colors = [
   '#2563eb',
@@ -22,14 +23,14 @@ export function buildJourneySegments(
     const endIndex = startIndex + leg.stops.length - 1
     const segment: ConnectionSegment = {
       lineId: leg.tripId,
-      lineName: leg.trainType ?? '차종 미제공',
+      lineName: trainTypeLabel(leg) ?? '차종 미제공',
       trainNumbers: [leg.trainNumber],
       stationIds: leg.stops.map((stop) => stop.stationId),
       startIndex,
       endIndex,
       directionConfirmed: true,
       color: colors[index % colors.length],
-      label: `${index + 1}. ${leg.trainType ?? '열차'} ${leg.trainNumber}호 · ${formatKoreaTime(leg.departureAt, date)} → ${formatKoreaTime(leg.arrivalAt, date)}${leg.trainType ? '' : ' · 차종 미제공'}`,
+      label: `${index + 1}. ${trainTypeLabel(leg) ?? '열차'} ${leg.trainNumber}호 · ${formatKoreaTime(leg.departureAt, date)} → ${formatKoreaTime(leg.arrivalAt, date)}${leg.trainType ? '' : ' · 차종 미제공'}`,
       ...(index
         ? {
             transferMinutes: Math.floor(

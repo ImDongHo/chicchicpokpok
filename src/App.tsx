@@ -1,3 +1,4 @@
+import { stationLabel } from './lib/station-labels.ts'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Icon } from './components/Icon.tsx'
@@ -67,10 +68,12 @@ export default function App() {
   const [preference, setPreference] =
     useState<JourneyPreference>('fewest-transfers')
   const [discoveryPreview, setDiscoveryPreview] = useState<string[]>([])
-  const previewDiscovery = useCallback(
-    (ids: string[]) => setDiscoveryPreview(ids),
-    [],
-  )
+  const previewDiscovery = useCallback((ids: string[]) => {
+    setDiscoveryPreview(ids)
+    setSelected((current) =>
+      current && ids.includes(current) ? current : null,
+    )
+  }, [])
   const [departureTime, setDepartureTime] = useState('00:00')
   const [transferMinutes, setTransferMinutes] = useState(10)
   const [timetable, setTimetable] = useState<TimetableIndex | null>(null)
@@ -407,7 +410,7 @@ export default function App() {
                   >
                     <button
                       className="station-main"
-                      aria-label={`${station.name}역 상세 보기`}
+                      aria-label={`${stationLabel(station.name)}역 상세 보기`}
                       aria-pressed={selected === station.id}
                       onClick={() => selectStation(station.id)}
                     >
@@ -416,7 +419,7 @@ export default function App() {
                       </span>
                       <span className="station-copy">
                         <strong>
-                          {station.name}
+                          {stationLabel(station.name)}
                           <span>역</span>
                         </strong>
                         <small>{station.area}</small>
@@ -452,7 +455,7 @@ export default function App() {
                     </button>
                     <button
                       className={`favorite-button ${favorites.includes(station.id) ? 'saved' : ''}`}
-                      aria-label={`${station.name}역 즐겨찾기 ${favorites.includes(station.id) ? '삭제' : '추가'}`}
+                      aria-label={`${stationLabel(station.name)}역 즐겨찾기 ${favorites.includes(station.id) ? '삭제' : '추가'}`}
                       aria-pressed={favorites.includes(station.id)}
                       onClick={() => toggleFavorite(station.id)}
                     >
@@ -538,7 +541,7 @@ export default function App() {
                   >
                     {routeStations.map((station) => (
                       <option key={station.id} value={station.id}>
-                        {station.name}역
+                        {stationLabel(station.name)}역
                       </option>
                     ))}
                   </select>
@@ -573,7 +576,7 @@ export default function App() {
                   >
                     {routeStations.map((station) => (
                       <option key={station.id} value={station.id}>
-                        {station.name}역
+                        {stationLabel(station.name)}역
                       </option>
                     ))}
                   </select>
@@ -716,9 +719,9 @@ export default function App() {
                     <div className="connection-heading">
                       <span className="eyebrow">YOUR NEXT JOURNEY</span>
                       <h2>
-                        {stationById.get(request.from)!.name}
+                        {stationLabel(stationById.get(request.from)!.name)}
                         <Icon name="arrow" size={20} />
-                        {stationById.get(request.to)!.name}
+                        {stationLabel(stationById.get(request.to)!.name)}
                       </h2>
                       <p>
                         {datasetLabel}에서 {connection.length}개 역을
@@ -752,7 +755,9 @@ export default function App() {
                               className={`stop-dot ${index === 0 || index === connection.length - 1 ? 'endpoint' : ''}`}
                             />
                             <div>
-                              <strong>{stationById.get(id)!.name}역</strong>
+                              <strong>
+                                {stationLabel(stationById.get(id)!.name)}역
+                              </strong>
                               <small>{stationById.get(id)!.area}</small>
                               {beginsSegment && (
                                 <small className="route-train-label">
@@ -883,7 +888,7 @@ export default function App() {
                 </span>
                 <div>
                   <h2>
-                    {selectedStation.name}
+                    {stationLabel(selectedStation.name)}
                     <span>역</span>
                   </h2>
                   <p>
@@ -893,7 +898,7 @@ export default function App() {
                 </div>
                 <button
                   className={`favorite-button ${favorites.includes(selectedStation.id) ? 'saved' : ''}`}
-                  aria-label={`선택한 ${selectedStation.name}역 즐겨찾기 ${favorites.includes(selectedStation.id) ? '삭제' : '추가'}`}
+                  aria-label={`선택한 ${stationLabel(selectedStation.name)}역 즐겨찾기 ${favorites.includes(selectedStation.id) ? '삭제' : '추가'}`}
                   onClick={() => toggleFavorite(selectedStation.id)}
                   aria-pressed={favorites.includes(selectedStation.id)}
                 >
@@ -918,7 +923,7 @@ export default function App() {
           {selectedStation && (
             <div className="mobile-selection">
               <span>
-                <strong>{selectedStation.name}역</strong>
+                <strong>{stationLabel(selectedStation.name)}역</strong>
                 <small>{selectedStation.area}</small>
               </span>
               <button onClick={() => chooseEndpoint('departure')}>출발</button>

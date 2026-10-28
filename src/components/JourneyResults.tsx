@@ -1,3 +1,5 @@
+import { trainTypeLabel } from '../lib/train-labels.ts'
+import { stationLabel } from '../lib/station-labels.ts'
 import { useMemo } from 'react'
 import type { CSSProperties } from 'react'
 import type { ConnectionSegment, Journey } from '../types.ts'
@@ -89,9 +91,9 @@ export function JourneyResults({
       <div className="connection-heading">
         <span className="eyebrow">운행 기록으로 확인한 경로</span>
         <h2>
-          {stops[0].name}
+          {stationLabel(stops[0].name)}
           <Icon name="arrow" size={20} />
-          {stops.at(-1)!.name}
+          {stationLabel(stops.at(-1)!.name)}
         </h2>
         <div className="journey-summary">
           <strong>{transfers ? `환승 ${transfers}회` : '직통'}</strong>
@@ -121,7 +123,10 @@ export function JourneyResults({
               {formatKoreaTime(option.departureAt, date)} →{' '}
               {formatKoreaTime(option.arrivalAt, date)} ·{' '}
               {option.legs
-                .map((leg) => `${leg.trainType ?? '열차'} ${leg.trainNumber}호`)
+                .map(
+                  (leg) =>
+                    `${trainTypeLabel(leg) ?? '열차'} ${leg.trainNumber}호`,
+                )
                 .join(' / ')}{' '}
               ·{' '}
               {option.legs.length === 1
@@ -151,7 +156,7 @@ export function JourneyResults({
                 className={`stop-dot ${index === 0 || index === stops.length - 1 ? 'endpoint' : ''}`}
               />
               <div>
-                <strong>{stop.name}역</strong>
+                <strong>{stationLabel(stop.name)}역</strong>
                 {!stationById.has(stop.stationId) && (
                   <small className="unmapped-stop">
                     지도 위치 정보 없음 · 정차역은 포함

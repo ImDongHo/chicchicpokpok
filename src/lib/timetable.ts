@@ -5,6 +5,7 @@ import type {
   TrainTrip,
   JourneyPreference,
 } from '../types.ts'
+import { hasUnconfirmedOperator } from './train-labels.ts'
 const koreaFormatter = new Intl.DateTimeFormat('ko-KR', {
   timeZone: 'Asia/Seoul',
   hour: '2-digit',
@@ -43,6 +44,7 @@ export function formatKoreaTime(
 
 interface IndexedTrip {
   trip: TrainTrip
+  operatorUnconfirmed: boolean
   arrivals: (number | null)[]
   departures: (number | null)[]
 }
@@ -65,6 +67,7 @@ export function createTimetableIndex(trips: TrainTrip[]): TimetableIndex {
   for (const trip of trips) {
     const service: IndexedTrip = {
       trip,
+      operatorUnconfirmed: hasUnconfirmedOperator(trip),
       arrivals: trip.stops.map((stop) => parseKoreaTime(stop.arrival)),
       departures: trip.stops.map((stop) => parseKoreaTime(stop.departure)),
     }
@@ -186,6 +189,7 @@ function journey(refs: LegRef[]): Journey {
     tripId: leg.service.trip.id,
     trainNumber: leg.service.trip.trainNumber,
     trainType: leg.service.trip.trainType,
+    ...(leg.service.operatorUnconfirmed ? { operatorUnconfirmed: true } : {}),
     stops: leg.service.trip.stops.slice(leg.from, leg.to + 1),
     departureAt: leg.departureAt,
     arrivalAt: leg.arrivalAt,

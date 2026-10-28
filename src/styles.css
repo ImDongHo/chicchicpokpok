@@ -2141,6 +2141,36 @@ button:focus:not(:focus-visible) {
   color: var(--text-muted);
   font-size: 11px;
 }
+.discovery-display-guide {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+.discovery-display-guide > summary {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--green);
+  cursor: pointer;
+  list-style: none;
+}
+.discovery-display-guide > summary::-webkit-details-marker {
+  display: none;
+}
+.discovery-display-guide > summary > svg {
+  flex-shrink: 0;
+}
+.discovery-display-guide > summary > svg:last-child {
+  margin-left: auto;
+}
+.discovery-display-guide[open] > summary > svg:last-child {
+  transform: rotate(90deg);
+}
+.discovery-display-guide > p {
+  margin-top: 7px;
+  padding-left: 19px;
+}
 .discovery-search-empty {
   padding: 20px 0;
   font-size: 12px;

@@ -1,3 +1,4 @@
+import { stationLabel } from "../lib/station-labels.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { Station } from "../types.ts";
@@ -289,8 +290,10 @@ export function DiscoveryPanel({
           <Icon name="route" size={16} />
           출발과 여행 조건
           <small>
-            {stations.find((station) => station.id === from)?.name ??
-              "출발역 선택"}{" "}
+            {stationLabel(
+              stations.find((station) => station.id === from)?.name ??
+                "출발역 선택",
+            )}{" "}
             · {form.duration / 60}시간 이내
           </small>
           <Icon name="chevron" size={16} />
@@ -318,7 +321,7 @@ export function DiscoveryPanel({
               >
                 {candidates.map((station) => (
                   <option key={station.id} value={station.id}>
-                    {station.name}역
+                    {stationLabel(station.name)}역
                   </option>
                 ))}
               </select>
@@ -454,6 +457,21 @@ export function DiscoveryPanel({
                 </span>
               )}
             </p>
+            {results.length > 0 && (
+              <details className="discovery-display-guide">
+                <summary>
+                  <Icon name="info" size={14} />
+                  전체 검색 · 카드 8곳씩 · 지도 최대 9개 역
+                  <Icon name="chevron" size={12} />
+                </summary>
+                <p>
+                  조건에 맞는 모든 지역에서 검색합니다. 카드는 최대 8곳씩
+                  보여주고, 지도에는 출발역 1개와 현재 페이지의 추천 역 최대
+                  8개를 합쳐 9개 역까지만 표시합니다. 도시 검색이나 페이지
+                  이동으로 다른 결과도 확인할 수 있습니다.
+                </p>
+              </details>
+            )}
             {results.length > 0 && filteredResults.length === 0 && (
               <div className="discovery-search-empty">
                 <p>

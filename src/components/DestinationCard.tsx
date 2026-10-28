@@ -1,3 +1,4 @@
+import { stationLabel } from '../lib/station-labels.ts'
 import type { DestinationRecommendation } from '../lib/recommendations.ts'
 import type { JourneySearchOptions } from '../lib/timetable.ts'
 import { formatKoreaTime } from '../lib/timetable.ts'
@@ -257,7 +258,7 @@ export function DestinationCard({
         </div>
         <p className="destination-station">
           <Icon name="pin" size={13} />
-          {result.area} · {result.station.name}역 도착
+          {result.area} · {stationLabel(result.station.name)}역 도착
         </p>
         <div className="destination-actions">
           <button

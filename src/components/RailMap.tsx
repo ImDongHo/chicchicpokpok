@@ -1,3 +1,4 @@
+import { stationLabel } from '../lib/station-labels.ts'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { stationById } from '../data/railway.ts'
 import type { ConnectionSegment, Station } from '../types.ts'
@@ -263,8 +264,8 @@ export function RailMap({
       const button = document.createElement('button')
       button.type = 'button'
       button.className = 'live-station'
-      button.textContent = station.name
-      button.setAttribute('aria-label', station.name + '역 선택')
+      button.textContent = stationLabel(station.name)
+      button.setAttribute('aria-label', stationLabel(station.name) + '역 선택')
       button.addEventListener('click', () => selectRef.current(station.id))
       const layer = new sdk.CustomOverlay({
         map,
@@ -286,7 +287,8 @@ export function RailMap({
             ? '도착'
             : ''
       const label =
-        (endpoint ? endpoint + ' · ' : '') + stationById.get(id)!.name
+        (endpoint ? endpoint + ' · ' : '') +
+        stationLabel(stationById.get(id)!.name)
       if (entry.button.textContent !== label)
         entry.button.replaceChildren(label)
       entry.button.classList.toggle('route-endpoint', !!endpoint)
@@ -485,7 +487,7 @@ export function RailMap({
                   className={`map-station ${active ? 'selected' : ''}`}
                   role="button"
                   tabIndex={0}
-                  aria-label={`${station.name}역 선택`}
+                  aria-label={`${stationLabel(station.name)}역 선택`}
                   aria-pressed={active}
                   onClick={() => onSelect(station.id)}
                   onKeyDown={(event) => {
@@ -496,7 +498,7 @@ export function RailMap({
                   }}
                 >
                   <title>
-                    {station.name}역 · {station.area}
+                    {stationLabel(station.name)}역 · {station.area}
                     {changeStations.has(station.id)
                       ? ' · 열차 경로 전환 지점'
                       : ''}
@@ -524,7 +526,7 @@ export function RailMap({
                       textAnchor={station.name === '오송' ? 'end' : 'start'}
                     >
                       {endpoint ? endpoint + ' · ' : ''}
-                      {station.name}
+                      {stationLabel(station.name)}
                     </text>
                   )}
                 </g>
@@ -549,14 +551,14 @@ export function RailMap({
             aria-label="지도 출발역과 도착역"
           >
             <span>
-              출발 <strong>{endpoints.departure}역</strong>
+              출발 <strong>{stationLabel(endpoints.departure)}역</strong>
               {!knownStationIds.has(connection[0]) && (
                 <small>지도 위치 미확인</small>
               )}
             </span>
             <Icon name="arrow" size={13} />
             <span>
-              도착 <strong>{endpoints.arrival}역</strong>
+              도착 <strong>{stationLabel(endpoints.arrival)}역</strong>
               {!knownStationIds.has(connection.at(-1)!) && (
                 <small>지도 위치 미확인</small>
               )}

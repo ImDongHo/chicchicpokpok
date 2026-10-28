@@ -50,6 +50,7 @@ export interface JourneyLeg {
   tripId: string
   trainNumber: string
   trainType: string | null
+  operatorUnconfirmed?: boolean
   stops: TrainStop[]
   departureAt: number
   arrivalAt: number
