@@ -565,6 +565,33 @@ button:focus:not(:focus-visible) {
   gap: 11px;
   z-index: 2;
   pointer-events: none;
+  flex-wrap: wrap;
+  max-width: calc(100% - 100px);
+}
+.map-endpoint-summary {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 11px;
+  border: 1px solid #dfe5d6;
+  border-radius: 7px;
+  background: #fffef5ed;
+  color: #617451;
+  font-size: 10px;
+}
+.map-endpoint-summary span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.map-endpoint-summary strong {
+  color: #264c3b;
+}
+.map-endpoint-summary small {
+  color: #936a2b;
+  font-size: 9px;
 }
 .map-tag {
   display: flex;
@@ -1156,6 +1183,20 @@ button:focus:not(:focus-visible) {
   box-shadow:
     0 0 0 2px white,
     0 0 0 4px var(--route-color, #83a78e);
+}
+.live-station.route-endpoint {
+  font-weight: 800;
+  border-width: 2px;
+}
+@media (max-width: 760px) {
+  .map-endpoint-summary {
+    font-size: 9px;
+    gap: 6px;
+    padding: 7px 9px;
+  }
+  .map-area.showing-route .mobile-selection {
+    top: 115px;
+  }
 }
 .live-station.dim {
   opacity: 0.35;

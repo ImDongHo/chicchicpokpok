@@ -695,7 +695,7 @@ export default function App() {
           </footer>
         </aside>
 
-        <div className="map-area">
+        <div className={`map-area ${connection ? 'showing-route' : ''}`}>
           <RailMap
             selected={selected}
             scopeStations={mapCandidates}
@@ -707,6 +707,20 @@ export default function App() {
             }
             connection={connection}
             segments={connectionSegments}
+            endpoints={
+              connection
+                ? {
+                    departure:
+                      selectedStops[0]?.name ??
+                      stationById.get(connection[0])?.name ??
+                      '출발',
+                    arrival:
+                      selectedStops.at(-1)?.name ??
+                      stationById.get(connection.at(-1)!)?.name ??
+                      '도착',
+                  }
+                : null
+            }
             onSelect={selectStation}
           />
           {selectedStation && (

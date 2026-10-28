@@ -34,6 +34,10 @@ jobs:
         env:
           DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
           RAILWAY_DATA_DATE: ${{ inputs.data_date }}
+      - name: Verify missing station locations with Kakao Places
+        run: npm run data:resolve-locations
+        env:
+          VITE_KAKAO_MAP_APP_KEY: ${{ vars.VITE_KAKAO_MAP_APP_KEY }}
       - name: Validate collected service connections
         run: npm run data:validate
       - run: npm run build

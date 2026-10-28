@@ -14,6 +14,7 @@ interface Props {
   overview: boolean
   connection: string[] | null
   segments: ConnectionSegment[]
+  endpoints: { departure: string; arrival: string } | null
   onSelect: (id: string) => void
 }
 
@@ -104,6 +105,7 @@ export function RailMap({
   overview,
   connection,
   segments,
+  endpoints,
   onSelect,
 }: Props) {
   const container = useRef<HTMLDivElement>(null)
@@ -276,6 +278,17 @@ export function RailMap({
 
   useEffect(() => {
     for (const [id, entry] of overlays.current) {
+      const endpoint =
+        id === connection?.[0]
+          ? '출발'
+          : id === connection?.at(-1)
+            ? '도착'
+            : ''
+      const label =
+        (endpoint ? endpoint + ' · ' : '') + stationById.get(id)!.name
+      if (entry.button.textContent !== label)
+        entry.button.replaceChildren(label)
+      entry.button.classList.toggle('route-endpoint', !!endpoint)
       entry.button.classList.toggle('selected', id === selected)
       entry.button.setAttribute('aria-pressed', String(id === selected))
       entry.button.classList.toggle('route-change', changeStations.has(id))
@@ -290,7 +303,7 @@ export function RailMap({
       )
       entry.layer.setZIndex?.(id === selected ? 10 : 1)
     }
-  }, [mode, selected, mapStations, routeColors, changeStations])
+  }, [mode, selected, mapStations, routeColors, changeStations, connection])
 
   useEffect(() => {
     const cache = overlays.current
@@ -456,8 +469,14 @@ export function RailMap({
             {mapStations.map((station) => {
               const [x, y] = project(station.lat, station.lng)
               const active = station.id === selected
+              const endpoint =
+                station.id === connection?.[0]
+                  ? '출발'
+                  : station.id === connection?.at(-1)
+                    ? '도착'
+                    : ''
               const routeColor = routeColors.get(station.id) ?? '#267a65'
-              const label = labelled.has(station.name) || active
+              const label = labelled.has(station.name) || active || !!endpoint
               return (
                 <g
                   key={station.id}
@@ -503,6 +522,7 @@ export function RailMap({
                       y={station.name === '오송' ? -12 : 5}
                       textAnchor={station.name === '오송' ? 'end' : 'start'}
                     >
+                      {endpoint ? endpoint + ' · ' : ''}
                       {station.name}
                     </text>
                   )}
@@ -522,6 +542,26 @@ export function RailMap({
               : '철도망 미리보기'}
         </span>
         <span className="map-count">현재 {mapStations.length}개 역 표시</span>
+        {connection && endpoints && (
+          <div
+            className="map-endpoint-summary"
+            aria-label="지도 출발역과 도착역"
+          >
+            <span>
+              출발 <strong>{endpoints.departure}역</strong>
+              {!knownStationIds.has(connection[0]) && (
+                <small>지도 위치 미확인</small>
+              )}
+            </span>
+            <Icon name="arrow" size={13} />
+            <span>
+              도착 <strong>{endpoints.arrival}역</strong>
+              {!knownStationIds.has(connection.at(-1)!) && (
+                <small>지도 위치 미확인</small>
+              )}
+            </span>
+          </div>
+        )}
       </div>
       <div className="map-controls">
         <button aria-label="지도 확대" onClick={() => changeZoom(1)}>
