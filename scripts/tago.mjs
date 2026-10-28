@@ -167,8 +167,24 @@ export function serviceQuery(trip, lookup) {
   return { from, to, first, last }
 }
 
-export function parseServices(rows, query, date) {
-  return rows.map((row) => {
+export function parseServices(
+  rows,
+  query,
+  date,
+  rejected = { reasons: {}, examples: [] },
+) {
+  const exclude = (reason, number, departure, arrival) => {
+    rejected.reasons[reason] = (rejected.reasons[reason] ?? 0) + 1
+    if (rejected.examples.length < 8)
+      rejected.examples.push({
+        reason,
+        trainNumber: number,
+        departure,
+        arrival,
+      })
+    return []
+  }
+  return rows.flatMap((row) => {
     const number = trainNumber(row.trainno)
     if (
       !number ||
@@ -178,22 +194,24 @@ export function parseServices(rows, query, date) {
       throw new TagoError(
         'TAGO omitted the documented train number or vehicle name.',
       )
-    const departure = tagoTime(row.depplandtime),
+    let departure, arrival
+    try {
+      departure = tagoTime(row.depplandtime)
       arrival = tagoTime(row.arrplandtime)
-    if (
-      departure.slice(0, 10).replaceAll('-', '') !== date ||
-      parseKoreaTime(arrival) < parseKoreaTime(departure)
-    )
-      throw new TagoError(
-        'TAGO timetable date or arrival order does not match the request.',
-      )
+    } catch {
+      return exclude('invalid-time-format', number)
+    }
+    if (departure.slice(0, 10).replaceAll('-', '') !== date)
+      return exclude('outside-request-date', number, departure, arrival)
+    if (parseKoreaTime(arrival) < parseKoreaTime(departure))
+      return exclude('arrival-before-departure', number, departure, arrival)
     if (
       normalizeStationName(row.depplacename) !==
         normalizeStationName(query.first.name) ||
       normalizeStationName(row.arrplacename) !==
         normalizeStationName(query.last.name)
     )
-      throw new TagoError('TAGO returned a timetable for different stations.')
+      return exclude('different-stations', number, departure, arrival)
     return {
       trainNumber: number,
       trainType: row.traingradename.trim(),
@@ -261,6 +279,7 @@ export async function collectTago(trips, date, key, fetcher = fetch) {
     throw new TagoError(
       'No unambiguous official station pairs could be joined to the recorded services.',
     )
+  const rejectedSchedules = { reasons: {}, examples: [] }
   const schedules = new Map(
     await mapBatches([...queries], async ([id, query]) => {
       const rows = await client.list(
@@ -272,7 +291,7 @@ export async function collectTago(trips, date, key, fetcher = fetch) {
         },
         true,
       )
-      return [id, parseServices(rows, query, date)]
+      return [id, parseServices(rows, query, date, rejectedSchedules)]
     }),
   )
   let matched = 0,
@@ -319,6 +338,7 @@ export async function collectTago(trips, date, key, fetcher = fetch) {
       unmatched,
       unmapped,
       vehicleKinds,
+      rejectedSchedules,
     },
     services: [...schedules.values()].flat(),
   }

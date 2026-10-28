@@ -412,7 +412,7 @@ export async function main() {
   }
   if (!tago.coverage.matched) {
     fail(
-      `TAGO returned no matching services for ${date}: ${tago.coverage.unmatched} unmatched, ${tago.coverage.unmapped} station pairs unavailable; no inferred train kinds will be published.`,
+      `TAGO returned no matching services for ${date}: ${tago.coverage.unmatched} unmatched, ${tago.coverage.unmapped} station pairs unavailable; rejected schedules=${JSON.stringify(tago.coverage.rejectedSchedules)}; no inferred train kinds will be published.`,
     )
   }
   const trips = tago.trips
@@ -420,7 +420,7 @@ export async function main() {
   dataset.metadata.tagoMatchedTrips = tago.coverage.matched
   if (process.env.GITHUB_ACTIONS === 'true') {
     console.log(
-      `::notice title=TAGO timetable crosscheck::${date}: ${tago.coverage.matched} exact service matches, ${tago.coverage.unmatched} unmatched, ${tago.coverage.unmapped} station pairs unavailable, ${tago.coverage.requests} requests.`,
+      `::notice title=TAGO timetable crosscheck::${date}: ${tago.coverage.matched} exact service matches, ${tago.coverage.unmatched} unmatched, ${tago.coverage.unmapped} station pairs unavailable, ${tago.coverage.requests} requests; rejected schedules=${JSON.stringify(tago.coverage.rejectedSchedules.reasons)}.`,
     )
     const examples = trips
       .filter((trip) =>

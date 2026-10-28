@@ -182,20 +182,25 @@ test('circular records can be classified using a distinct intermediate endpoint 
 })
 
 test('TAGO dates, stations and timetable direction must agree with the request', () => {
-  assert.throws(() => parseServices([row], query, '20261027'), /date/)
-  assert.throws(
-    () => parseServices([{ ...row, arrplacename: '부산' }], query, trip.date),
-    /stations/,
+  assert.deepEqual(parseServices([row], query, '20261027'), [])
+  assert.deepEqual(
+    parseServices([{ ...row, arrplacename: '부산' }], query, trip.date),
+    [],
   )
-  assert.throws(
-    () =>
-      parseServices(
-        [{ ...row, arrplandtime: 20261028040000 }],
-        query,
-        trip.date,
-      ),
-    /arrival order/,
+  assert.deepEqual(
+    parseServices([{ ...row, arrplandtime: 20261028040000 }], query, trip.date),
+    [],
   )
+  const rejected = { reasons: {}, examples: [] }
+  const verified = parseServices(
+    [{ ...row, arrplandtime: 20261028040000 }, row],
+    query,
+    trip.date,
+    rejected,
+  )
+  assert.equal(verified.length, 1)
+  assert.equal(matchService(trip, query, verified)?.trainType, 'KTX-이음')
+  assert.equal(rejected.reasons['arrival-before-departure'], 1)
   assert.throws(() => tagoTime(20260230080000), /invalid/)
   assert.throws(() => tagoTime(20261028240000), /invalid/)
   assert.equal(tagoTime(20261029001000), '2026-10-29 00:10:00')
