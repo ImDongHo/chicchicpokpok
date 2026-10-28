@@ -8,6 +8,7 @@ import {
   parseKoreaTime,
 } from '../lib/timetable.ts'
 import { Icon } from './Icon.tsx'
+import { BookingLinks } from './BookingLinks.tsx'
 
 interface Props {
   loadState: 'idle' | 'loading' | 'ready' | 'error'
@@ -64,7 +65,7 @@ export function JourneyResults({
         <p>
           자료 날짜와 출발 시각을 확인해 주세요.
           <br />
-          직통편을 먼저 찾고, 환승 시간을 검증합니다.
+          운행 방향과 환승 시간을 확인해 실제 열차편을 연결합니다.
         </p>
       </div>
     )
@@ -86,7 +87,7 @@ export function JourneyResults({
   return (
     <>
       <div className="connection-heading">
-        <span className="eyebrow">RECORDED TRAIN SERVICE</span>
+        <span className="eyebrow">운행 기록으로 확인한 경로</span>
         <h2>
           {stops[0].name}
           <Icon name="arrow" size={20} />
@@ -105,7 +106,7 @@ export function JourneyResults({
         </p>
         <p>열차편에 따라 오송 등 중간 정차역이 달라질 수 있습니다.</p>
         <button className="edit-journey-button" onClick={onExpand}>
-          열차·출발 시각 변경
+          열차·출발 시각·정렬 변경
         </button>
       </div>
       <label className="journey-picker">
@@ -130,6 +131,7 @@ export function JourneyResults({
           ))}
         </select>
       </label>
+      <BookingLinks journey={selected} />
       <ol className="connection-stops">
         {stops.map((stop, index) => {
           const segment =

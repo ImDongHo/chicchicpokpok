@@ -3,6 +3,9 @@ import type { CSSProperties } from 'react'
 import { Icon } from './components/Icon.tsx'
 import { RailMap } from './components/RailMap.tsx'
 import { JourneyResults } from './components/JourneyResults.tsx'
+import { DiscoveryPanel } from './components/DiscoveryPanel.tsx'
+import type { JourneyPreference } from './types.ts'
+import type { JourneySearchOptions } from './lib/timetable.ts'
 import { StationDescription } from './components/StationDescription.tsx'
 import {
   lines,
@@ -45,7 +48,7 @@ function readFavorites(): string[] {
 }
 
 export default function App() {
-  const [tab, setTab] = useState<'stations' | 'route'>('stations')
+  const [tab, setTab] = useState<'stations' | 'route' | 'discover'>('stations')
   const [query, setQuery] = useState('')
   const [region, setRegion] = useState('서울')
   const [selected, setSelected] = useState<string | null>(null)
@@ -54,12 +57,20 @@ export default function App() {
   const [onlyFavorites, setOnlyFavorites] = useState(false)
   const [departure, setDeparture] = useState(initialDeparture)
   const [arrival, setArrival] = useState(initialArrival)
-  const [request, setRequest] = useState<{
-    from: string
-    to: string
-    earliestTime: string
-    minTransferMinutes: number
-  } | null>(null)
+  const [request, setRequest] = useState<
+    | (Omit<JourneySearchOptions, 'date' | 'limit'> & {
+        from: string
+        to: string
+      })
+    | null
+  >(null)
+  const [preference, setPreference] =
+    useState<JourneyPreference>('fewest-transfers')
+  const [discoveryPreview, setDiscoveryPreview] = useState<string[]>([])
+  const previewDiscovery = useCallback(
+    (ids: string[]) => setDiscoveryPreview(ids),
+    [],
+  )
   const [departureTime, setDepartureTime] = useState('00:00')
   const [transferMinutes, setTransferMinutes] = useState(10)
   const [timetable, setTimetable] = useState<TimetableIndex | null>(null)
@@ -100,9 +111,8 @@ export default function App() {
     () =>
       !isSampleData && timetable && request
         ? findJourneys(timetable, request.from, request.to, {
+            ...request,
             date: dataDate,
-            earliestTime: request.earliestTime,
-            minTransferMinutes: request.minTransferMinutes,
           })
         : [],
     [timetable, request],
@@ -143,17 +153,22 @@ export default function App() {
   )
   const mapCandidates = useMemo(
     () =>
-      connection
-        ? [
-            ...new Map(
-              connection.flatMap((id) => {
-                const station = stationById.get(id)
-                return station ? [[id, station] as const] : []
-              }),
-            ).values(),
-          ]
-        : filteredStations,
-    [filteredStations, connection],
+      tab === 'discover'
+        ? discoveryPreview.flatMap((id) => {
+            const station = stationById.get(id)
+            return station ? [station] : []
+          })
+        : connection
+          ? [
+              ...new Map(
+                connection.flatMap((id) => {
+                  const station = stationById.get(id)
+                  return station ? [[id, station] as const] : []
+                }),
+              ).values(),
+            ]
+          : filteredStations,
+    [filteredStations, connection, tab, discoveryPreview],
   )
   async function ensureTimetable() {
     if (isSampleData || timetable) return
@@ -183,6 +198,30 @@ export default function App() {
     setTab('route')
     setSheetExpanded(true)
     void ensureTimetable()
+  }
+  function openDiscovery() {
+    setTab('discover')
+    setSheetExpanded(true)
+    setRequest(null)
+    setSelected(null)
+    setDiscoveryPreview([departure])
+    void ensureTimetable()
+  }
+  function chooseRecommendedRoute(
+    from: string,
+    to: string,
+    options: JourneySearchOptions,
+  ) {
+    setDeparture(from)
+    setArrival(to)
+    setDepartureTime(options.earliestTime ?? '00:00')
+    setTransferMinutes(options.minTransferMinutes ?? 10)
+    setPreference(options.preference ?? 'fastest')
+    setJourneyChoice(0)
+    setRequest({ ...options, from, to })
+    setSelected(null)
+    setTab('route')
+    setSheetExpanded(false)
   }
   const selectStation = useCallback((id: string) => setSelected(id), [])
   const toggleFavorite = (id: string) =>
@@ -224,7 +263,7 @@ export default function App() {
 
       <main className="workspace">
         <aside
-          className={`sidebar ${sheetExpanded ? 'expanded' : ''} ${tab === 'route' ? 'planning' : ''}`}
+          className={`sidebar ${sheetExpanded ? 'expanded' : ''} ${tab !== 'stations' ? 'planning' : ''}`}
           aria-label="기차역 검색과 경로 탐색"
         >
           <button
@@ -273,6 +312,17 @@ export default function App() {
             >
               <Icon name="route" size={17} />
               연결 경로
+            </button>
+            <button
+              role="tab"
+              id="discovery-tab"
+              aria-selected={tab === 'discover'}
+              aria-controls="discovery-panel"
+              className={tab === 'discover' ? 'active' : ''}
+              onClick={openDiscovery}
+            >
+              <Icon name="map" size={17} />
+              여행지 추천
             </button>
           </div>
 
@@ -435,7 +485,7 @@ export default function App() {
                 )}
               </div>
             </section>
-          ) : (
+          ) : tab === 'route' ? (
             <section
               className={`route-panel ${selectedJourney ? 'has-result' : ''}`}
               id="route-panel"
@@ -453,6 +503,7 @@ export default function App() {
                     to: arrival,
                     earliestTime: departureTime,
                     minTransferMinutes: transferMinutes,
+                    preference,
                   })
                   setSelected(stationById.has(arrival) ? arrival : null)
                 }}
@@ -516,7 +567,10 @@ export default function App() {
                   <>
                     <p className="timetable-date">
                       {dataDate.slice(0, 4)}.{dataDate.slice(4, 6)}.
-                      {dataDate.slice(6, 8)} 운행 기록 기준 · 직통 우선
+                      {dataDate.slice(6, 8)} 운행 기록 기준 ·{' '}
+                      {preference === 'fastest'
+                        ? '빠른 도착 우선'
+                        : '적은 환승 우선'}
                     </p>
                     {!!timetable?.excludedTripCount && (
                       <p className="timetable-date">
@@ -554,6 +608,54 @@ export default function App() {
                         </select>
                       </label>
                     </div>
+                  </>
+                )}
+                {!isSampleData && (
+                  <>
+                    <div
+                      className="journey-preference"
+                      role="group"
+                      aria-label="경로 정렬 기준"
+                    >
+                      {(
+                        [
+                          { value: 'fastest', label: '빠른 도착' },
+                          { value: 'fewest-transfers', label: '적은 환승' },
+                        ] as const
+                      ).map((option) => (
+                        <button
+                          type="button"
+                          key={option.value}
+                          aria-pressed={preference === option.value}
+                          onClick={() => {
+                            setPreference(option.value)
+                            setJourneyChoice(0)
+                            setRequest((previous) =>
+                              previous
+                                ? { ...previous, preference: option.value }
+                                : null,
+                            )
+                          }}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="preference-hint">
+                      {preference === 'fastest'
+                        ? '요청 시각 이후 가장 빨리 도착하는 편을 비교합니다.'
+                        : '환승 횟수를 먼저, 같은 횟수에서는 빠른 도착을 비교합니다.'}
+                    </p>
+                    {request?.maxDurationMinutes && (
+                      <p className="preference-hint">
+                        추천 조건: 편도 {request.maxDurationMinutes / 60}시간
+                        이내 · 환승 {request.maxTransfers ?? 2}회까지
+                        {request.latestArrivalTime
+                          ? ` · ${request.latestArrivalTime}까지 도착`
+                          : ''}
+                        . 다시 검색하면 추천 조건이 해제됩니다.
+                      </p>
+                    )}
                   </>
                 )}
                 <button
@@ -682,6 +784,20 @@ export default function App() {
                 </span>
               </p>
             </section>
+          ) : (
+            <DiscoveryPanel
+              stations={stations}
+              regions={regions}
+              date={dataDate}
+              initialFrom={departure}
+              sample={isSampleData}
+              index={timetable}
+              loadState={loadState}
+              error={loadError}
+              onRetry={() => void ensureTimetable()}
+              onPreview={previewDiscovery}
+              onSelect={chooseRecommendedRoute}
+            />
           )}
           <footer className="sidebar-footer">
             <span>
@@ -700,6 +816,7 @@ export default function App() {
             selected={selected}
             scopeStations={mapCandidates}
             overview={
+              tab !== 'discover' &&
               region === '전체' &&
               !query.trim() &&
               !onlyFavorites &&

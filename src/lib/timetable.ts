@@ -1,4 +1,10 @@
-import type { Journey, JourneyLeg, TrainStop, TrainTrip } from '../types.ts'
+import type {
+  Journey,
+  JourneyLeg,
+  TrainStop,
+  TrainTrip,
+  JourneyPreference,
+} from '../types.ts'
 const koreaFormatter = new Intl.DateTimeFormat('ko-KR', {
   timeZone: 'Asia/Seoul',
   hour: '2-digit',
@@ -119,13 +125,17 @@ interface LegRef {
 interface Label {
   arrival: number
   legs: LegRef[]
+  departure: number
 }
-interface Options {
+export interface JourneySearchOptions {
   date: string
   earliestTime?: string
   minTransferMinutes?: number
   maxTransfers?: number
   limit?: number
+  preference?: JourneyPreference
+  maxDurationMinutes?: number
+  latestArrivalTime?: string
 }
 
 function startingTime(date: string, time: string): number | null {
@@ -190,94 +200,166 @@ function journey(refs: LegRef[]): Journey {
   }
 }
 
+function compareJourneys(
+  a: Journey,
+  b: Journey,
+  preference: JourneyPreference,
+) {
+  const transfers = a.legs.length - b.legs.length
+  return (
+    (preference === 'fewest-transfers' ? transfers : 0) ||
+    a.arrivalAt - b.arrivalAt ||
+    transfers ||
+    b.departureAt - a.departureAt ||
+    a.id.localeCompare(b.id)
+  )
+}
+
+function addLabel(target: Map<string, Label[]>, id: string, label: Label) {
+  const previous = target.get(id) ?? []
+  // Retain earlier arrivals and later departures as a Pareto frontier. A later
+  // origin departure can meet a duration limit even when an earlier one cannot.
+  if (
+    previous.some(
+      (value) =>
+        value.arrival <= label.arrival && value.departure >= label.departure,
+    )
+  )
+    return
+  target.set(id, [
+    ...previous.filter(
+      (value) =>
+        !(label.arrival <= value.arrival && label.departure >= value.departure),
+    ),
+    label,
+  ])
+}
+
+function searchJourneys(
+  index: TimetableIndex,
+  start: string,
+  options: JourneySearchOptions,
+  target?: string,
+): Map<string, LegRef[][]> {
+  const result = new Map<string, LegRef[][]>()
+  const notBefore = startingTime(options.date, options.earliestTime ?? '00:00'),
+    midnight = startingTime(options.date, '00:00')
+  if (notBefore === null || midnight === null) return result
+  const transferMinutes = options.minTransferMinutes ?? 10
+  const maxDuration = options.maxDurationMinutes ?? Infinity
+  if (
+    !Number.isFinite(transferMinutes) ||
+    transferMinutes < 0 ||
+    !(maxDuration > 0)
+  )
+    return result
+  const transferMs = Math.min(transferMinutes, 240) * 60000
+  const maxLegs = Math.max(1, Math.min((options.maxTransfers ?? 2) + 1, 3))
+  const lastArrival = options.latestArrivalTime
+    ? startingTime(options.date, options.latestArrivalTime)
+    : midnight + 2 * 86400000
+  if (lastArrival === null || lastArrival < notBefore) return result
+  const preference = options.preference ?? 'fewest-transfers'
+  let labels = new Map<string, Label[]>([
+    [start, [{ arrival: notBefore, departure: notBefore, legs: [] }]],
+  ])
+  for (let depth = 1; depth <= maxLegs; depth++) {
+    const next = new Map<string, Label[]>()
+    for (const [stationId, values] of labels) {
+      const entries = index.departures.get(stationId) ?? []
+      for (const label of values) {
+        const earliest = label.arrival + (depth === 1 ? 0 : transferMs)
+        for (let i = lowerBound(entries, earliest); i < entries.length; i++) {
+          const boarding = entries[i]
+          if (depth === 1 && boarding.departure >= midnight + 86400000) break
+          if (boarding.departure > lastArrival) break
+          if (
+            label.legs.some(
+              (leg) => leg.service.trip.id === boarding.service.trip.id,
+            )
+          )
+            continue
+          visitStops(boarding, (leg) => {
+            const id = leg.service.trip.stops[leg.to].stationId
+            if (id === start || leg.arrivalAt > lastArrival) return
+            const departure = depth === 1 ? leg.departureAt : label.departure
+            if (leg.arrivalAt - departure > maxDuration * 60000) return
+            const refs = [...label.legs, leg]
+            if (depth === 1) {
+              // Keep every direct service selectable, including slower stopping
+              // variants whose complete stop lists differ from express trains.
+              if (!result.has(id)) result.set(id, [])
+              result.get(id)!.push(refs)
+            }
+            addLabel(next, id, {
+              arrival: leg.arrivalAt,
+              departure,
+              legs: refs,
+            })
+          })
+        }
+      }
+    }
+    if (depth > 1)
+      for (const [id, values] of next) {
+        if (!result.has(id)) result.set(id, [])
+        result.get(id)!.push(...values.map((value) => value.legs))
+      }
+    if (
+      target &&
+      preference === 'fewest-transfers' &&
+      result.get(target)?.length
+    )
+      break
+    labels = next
+    if (!labels.size) break
+  }
+  return result
+}
+
 export function findJourneys(
   index: TimetableIndex,
   start: string,
   end: string,
-  options: Options,
+  options: JourneySearchOptions,
 ): Journey[] {
   if (start === end) return []
-  const notBefore = startingTime(options.date, options.earliestTime ?? '00:00'),
-    midnight = startingTime(options.date, '00:00')
-  if (notBefore === null || midnight === null) return []
-  const limit = Math.max(1, Math.min(options.limit ?? 12, 50))
-  const firstDayEnd = midnight + 86400000
-  const starts = index.departures.get(start) ?? []
-  const direct: LegRef[][] = []
-  for (
-    let i = lowerBound(starts, notBefore);
-    i < starts.length && starts[i].departure < firstDayEnd;
-    i++
-  ) {
-    visitStops(starts[i], (leg) => {
-      if (leg.service.trip.stops[leg.to].stationId === end) direct.push([leg])
-    })
-  }
-  if (direct.length)
-    return direct
-      .map(journey)
-      .sort(
-        (a, b) =>
-          a.departureAt - b.departureAt ||
-          a.arrivalAt - b.arrivalAt ||
-          a.id.localeCompare(b.id),
-      )
-      .slice(0, limit)
+  const preference = options.preference ?? 'fewest-transfers'
+  const refs = searchJourneys(index, start, options, end).get(end) ?? []
+  return [
+    ...new Map(
+      refs.map((value) => {
+        const item = journey(value)
+        return [item.id, item]
+      }),
+    ).values(),
+  ]
+    .sort((a, b) => compareJourneys(a, b, preference))
+    .slice(0, Math.max(1, Math.min(options.limit ?? 12, 50)))
+}
 
-  const transferMinutes = options.minTransferMinutes ?? 10
-  if (!Number.isFinite(transferMinutes) || transferMinutes < 0) return []
-  const transferMs = Math.min(transferMinutes, 240) * 60000
-  const maxLegs = Math.max(1, Math.min((options.maxTransfers ?? 2) + 1, 3))
-  let labels = new Map<string, Label>([
-    [start, { arrival: notBefore, legs: [] }],
-  ])
-  for (let depth = 1; depth <= maxLegs; depth++) {
-    const next = new Map<string, Label>(),
-      found: LegRef[][] = []
-    for (const [stationId, label] of labels) {
-      const entries = index.departures.get(stationId) ?? []
-      const earliest = label.arrival + (depth === 1 ? 0 : transferMs)
-      for (let i = lowerBound(entries, earliest); i < entries.length; i++) {
-        const boarding = entries[i]
-        if (depth === 1 && boarding.departure >= firstDayEnd) break
-        if (boarding.departure > midnight + 2 * 86400000) break
-        if (
-          label.legs.some(
-            (leg) => leg.service.trip.id === boarding.service.trip.id,
-          )
-        )
-          continue
-        visitStops(boarding, (leg) => {
-          const id = leg.service.trip.stops[leg.to].stationId
-          const refs = [...label.legs, leg]
-          if (id === end) found.push(refs)
-          const previous = next.get(id)
-          if (!previous || leg.arrivalAt < previous.arrival)
-            next.set(id, { arrival: leg.arrivalAt, legs: refs })
-        })
-      }
+// A single traversal supplies destination discovery; it does not run a separate
+// full search for every station on the map.
+export function findReachableJourneys(
+  index: TimetableIndex,
+  start: string,
+  options: JourneySearchOptions,
+): Map<string, Journey> {
+  const result = new Map<string, Journey>()
+  const preference = options.preference ?? 'fastest'
+  for (const [id, refs] of searchJourneys(index, start, {
+    ...options,
+    preference,
+  })) {
+    let best: Journey | undefined
+    for (const ref of refs) {
+      const candidate = journey(ref)
+      if (!best || compareJourneys(candidate, best, preference) < 0)
+        best = candidate
     }
-    if (found.length) {
-      return [
-        ...new Map(
-          found.map((refs) => {
-            const result = journey(refs)
-            return [result.id, result]
-          }),
-        ).values(),
-      ]
-        .sort(
-          (a, b) =>
-            a.arrivalAt - b.arrivalAt ||
-            b.departureAt - a.departureAt ||
-            a.id.localeCompare(b.id),
-        )
-        .slice(0, limit)
-    }
-    labels = next
-    if (!labels.size) break
+    if (best) result.set(id, best)
   }
-  return []
+  return result
 }
 
 export function journeyStops(result: Journey): TrainStop[] {

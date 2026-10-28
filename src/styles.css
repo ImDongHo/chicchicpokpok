@@ -840,6 +840,220 @@ button:focus:not(:focus-visible) {
   padding: 0 27px;
   flex-shrink: 0;
 }
+.journey-preference {
+  display: flex;
+  gap: 5px;
+  margin-top: 14px;
+  padding: 4px;
+  border-radius: 8px;
+  background: #edf2e9;
+}
+.journey-preference button {
+  flex: 1;
+  padding: 9px 5px;
+  border-radius: 6px;
+  color: #73836b;
+  font-size: 11px;
+}
+.journey-preference button[aria-pressed='true'] {
+  background: white;
+  color: var(--green);
+  font-weight: 700;
+  box-shadow: 0 1px 4px #36532d12;
+}
+.preference-hint {
+  font-size: 9px;
+  line-height: 1.5;
+  color: #7b8b71;
+  margin: 7px 0;
+}
+.booking-links {
+  padding: 0 0 17px;
+}
+.booking-links > div {
+  display: flex;
+  gap: 7px;
+}
+.booking-links a {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  background: #eef4e7;
+  border: 1px solid #d9e4ce;
+  border-radius: 7px;
+  padding: 9px 6px;
+  font-size: 10px;
+  color: var(--green);
+  font-weight: 600;
+}
+.booking-links p {
+  margin: 7px 0 0;
+  font-size: 9px;
+  line-height: 1.6;
+  color: #7f8d75;
+}
+.discovery-panel {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+.discovery-heading {
+  padding: 0 27px 15px;
+}
+.discovery-heading h2 {
+  margin: 10px 0 8px;
+  font-size: 24px;
+  letter-spacing: -1px;
+}
+.discovery-heading p {
+  color: #7d8c73;
+  font-size: 10px;
+  line-height: 1.6;
+  margin: 0;
+}
+.discovery-form {
+  padding: 0 27px 15px;
+  flex-shrink: 0;
+}
+.discovery-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.discovery-form label:not(.roundtrip-toggle) {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 10px;
+  color: #74866b;
+  background: #f6f9f2;
+  border: 1px solid #dce5d5;
+  border-radius: 8px;
+  padding: 10px;
+}
+.discovery-form select,
+.discovery-form input[type='time'] {
+  width: 100%;
+  min-width: 0;
+  color: #335b43;
+  font-size: 12px;
+  border: 0;
+  background: transparent;
+}
+.roundtrip-toggle {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 5px 7px;
+  font-size: 11px;
+  color: #426347;
+  margin: 13px 0;
+  align-items: center;
+}
+.roundtrip-toggle input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--green);
+}
+.roundtrip-toggle span {
+  grid-column: 2;
+  color: #87947c;
+  font-size: 9px;
+}
+.discovery-results {
+  padding: 0 27px 20px;
+}
+.discovery-status,
+.discovery-result-count {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #7c8d70;
+  margin: 8px 0 15px;
+}
+.destination-card {
+  border: 1px solid #dfe7d7;
+  background: #fbfcf8;
+  padding: 14px;
+  border-radius: 11px;
+  margin-bottom: 11px;
+}
+.destination-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.destination-title h3 {
+  font-size: 20px;
+  margin: 0;
+}
+.destination-title > span {
+  font-size: 9px;
+  color: var(--green);
+  padding: 4px 7px;
+  background: #ebf2e1;
+  border-radius: 5px;
+}
+.destination-card p {
+  color: #7a8c6b;
+  font-size: 10px;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+.destination-times {
+  font-size: 13px;
+  color: #31533f;
+}
+.destination-times small {
+  font-size: 10px;
+  font-weight: 400;
+  color: #7a8a70;
+}
+.destination-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 12px;
+}
+.destination-actions button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid #d9e3ce;
+  border-radius: 7px;
+  padding: 8px 5px;
+  color: #557147;
+  font-size: 10px;
+}
+.destination-actions button:first-child {
+  color: white;
+  background: var(--green);
+  border-color: var(--green);
+}
+@media (max-width: 760px) {
+  .tabs button {
+    font-size: 10px;
+    gap: 5px;
+  }
+  .discovery-heading {
+    padding: 0 20px 12px;
+  }
+  .discovery-heading h2 {
+    font-size: 21px;
+    margin-top: 7px;
+  }
+  .discovery-form {
+    padding: 0 20px 12px;
+  }
+  .discovery-results {
+    padding: 0 20px 17px;
+  }
+  .sidebar:not(.expanded) .discovery-panel.has-results .discovery-form {
+    display: none;
+  }
+}
 .timetable-date {
   font-size: 10px;
   color: #64775b;

@@ -61,3 +61,5 @@ export interface Journey {
   departureAt: number
   arrivalAt: number
 }
+
+export type JourneyPreference = 'fastest' | 'fewest-transfers'
