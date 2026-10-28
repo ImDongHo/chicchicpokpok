@@ -26,6 +26,49 @@ async function main() {
   const index = createTimetableIndex(trips)
   const byId = new Map(trips.map((trip) => [trip.id, trip]))
   const date = metadata.dataDate
+  let tagoVerifiedServices = 0
+  if (dataset.metadata.tagoMatchedTrips) {
+    const snapshot = JSON.parse(
+      await readFile(resolve(root, 'public/data/railway/tago.json'), 'utf8'),
+    )
+    assert.equal(snapshot.metadata.dataDate, date)
+    const keyOf = (record) =>
+      [
+        Number(record.trainNumber),
+        record.from,
+        record.to,
+        parseKoreaTime(record.departure),
+        parseKoreaTime(record.arrival),
+        record.trainType,
+      ].join('|')
+    const official = new Set(snapshot.services.map(keyOf))
+    for (const trip of trips) {
+      const proof = trip.timetableVerified
+      if (!proof) continue
+      const last = trip.stops.findLast(
+        (stop) => stop.stationId !== trip.stops[0].stationId,
+      )
+      assert.equal(proof.source, 'TAGO')
+      assert.equal(proof.date, date)
+      assert.equal(
+        parseKoreaTime(proof.departure),
+        parseKoreaTime(trip.stops[0].departure),
+      )
+      assert.equal(parseKoreaTime(proof.arrival), parseKoreaTime(last.arrival))
+      assert.ok(
+        official.has(
+          keyOf({
+            ...proof,
+            trainNumber: trip.trainNumber,
+            trainType: trip.trainType,
+          }),
+        ),
+        `Train ${trip.trainNumber} has no matching official TAGO record`,
+      )
+      tagoVerifiedServices++
+    }
+    assert.equal(tagoVerifiedServices, dataset.metadata.tagoMatchedTrips)
+  }
   const dayOf = (time) =>
     new Date(time + 9 * 3600000).toISOString().slice(0, 10).replaceAll('-', '')
   const hourOf = (time) =>
@@ -201,6 +244,7 @@ async function main() {
   }
   const report = {
     date,
+    tagoVerifiedServices,
     testedServices,
     skippedServices: skipped,
     representativeCases: cases,

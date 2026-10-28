@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
+import { collectTago, TagoError } from './tago.mjs'
 
 const stationEndpoint =
   'https://api.odcloud.kr/api/15067652/v1/uddi:29222bc3-1bc1-44bd-9ad6-9210ddb9a6ca'
@@ -394,66 +395,47 @@ export async function main() {
     key,
     date,
   )
-  const { dataset, trips, coverage } = transformData(
-    stationRows,
-    planRows,
-    stopRows,
-    date,
-  )
+  const {
+    dataset,
+    coverage,
+    trips: recordedTrips,
+  } = transformData(stationRows, planRows, stopRows, date)
+  let tago
   try {
-    const codes = await collectPages(`${runEndpoint}/codes2`, 'code', key, date)
-    const codeTypes = new Map()
-    for (const row of codes) {
-      const type = String(row.type ?? 'unknown')
-      if (!codeTypes.has(type)) codeTypes.set(type, [])
-      if (codeTypes.get(type).length < 8) codeTypes.get(type).push(row)
-    }
-    coverage.codeTypes = Object.fromEntries(codeTypes)
+    tago = await collectTago(recordedTrips, date, key)
   } catch (error) {
-    coverage.codeStatus =
-      error instanceof CollectionError
+    fail(
+      error instanceof TagoError
         ? error.message
-        : 'Code metadata unavailable.'
-  }
-  // Probe the official timetable/classification source without exposing its key.
-  try {
-    const url = new URL(
-      'https://apis.data.go.kr/1613000/TrainInfo/GetVhcleKndList',
+        : 'TAGO collection failed; credentials omitted.',
     )
-    url.searchParams.set('serviceKey', key)
-    url.searchParams.set('_type', 'json')
-    const response = await fetch(url, {
-      signal: AbortSignal.timeout(20000),
-      redirect: 'error',
-    })
-    const text = await response.text()
-    let payload
-    try {
-      payload = JSON.parse(text)
-    } catch {
-      payload = null
-    }
-    const resultCode =
-      payload?.response?.header?.resultCode ??
-      /<returnReasonCode>([^<]+)<\/returnReasonCode>/.exec(text)?.[1] ??
-      /<resultCode>([^<]+)<\/resultCode>/.exec(text)?.[1]
-    coverage.timetableSource = {
-      httpStatus: response.status,
-      resultCode: resultCode ? String(resultCode).slice(0, 10) : null,
-      available: response.ok && ['0', '00'].includes(String(resultCode)),
-    }
-    if (coverage.timetableSource.available)
-      coverage.vehicleKinds = payload.response.body.items.item
-  } catch {
-    coverage.timetableSource = {
-      available: false,
-      reason: 'Timetable source request unavailable; credentials omitted.',
-    }
   }
+  if (!tago.coverage.matched) {
+    fail(
+      `TAGO returned no matching services for ${date}: ${tago.coverage.unmatched} unmatched, ${tago.coverage.unmapped} station pairs unavailable; no inferred train kinds will be published.`,
+    )
+  }
+  const trips = tago.trips
+  coverage.timetableSource = { available: true, ...tago.coverage }
+  dataset.metadata.tagoMatchedTrips = tago.coverage.matched
   if (process.env.GITHUB_ACTIONS === 'true') {
-    const source = coverage.timetableSource
     console.log(
-      `::notice title=TAGO connectivity::available=${source.available}, HTTP=${source.httpStatus ?? 'unavailable'}, resultCode=${source.resultCode ?? 'unavailable'}`,
+      `::notice title=TAGO timetable crosscheck::${date}: ${tago.coverage.matched} exact service matches, ${tago.coverage.unmatched} unmatched, ${tago.coverage.unmapped} station pairs unavailable, ${tago.coverage.requests} requests.`,
+    )
+    const examples = trips
+      .filter((trip) =>
+        ['00002', '00004', '00801', '01851'].includes(trip.trainNumber),
+      )
+      .map((trip) => ({
+        number: trip.trainNumber,
+        type: trip.trainType,
+        date: trip.date,
+        verified: !!trip.timetableVerified,
+        from: trip.stops[0].name,
+        to: trip.stops.at(-1).name,
+      }))
+    console.log(
+      `::notice title=TAGO service examples::${JSON.stringify(examples).replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A')}`,
     )
   }
   const root = fileURLToPath(new URL('../', import.meta.url))
@@ -479,6 +461,13 @@ export async function main() {
   await writeFile(
     resolve(root, 'public/data/railway/coverage.json'),
     JSON.stringify(coverage),
+  )
+  await writeFile(
+    resolve(root, 'public/data/railway/tago.json'),
+    JSON.stringify({
+      metadata: { source: 'TAGO', dataDate: date },
+      services: tago.services,
+    }),
   )
   console.log(
     `Collected ${date}: ${dataset.stations.length} mapped stations, ${trips.length} complete trains; ${dataset.metadata.rejectedTrips} trains excluded.`,
