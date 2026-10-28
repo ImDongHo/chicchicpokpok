@@ -14,8 +14,10 @@
   font-weight: 400;
   font-size: 14px;
   --green: #176957;
-  --muted: #829086;
-  --border: #e8ece6;
+  --text-muted: #5f6f64;
+  --muted: var(--text-muted);
+  --ui-border: #7d8d75;
+  --border: var(--ui-border);
 }
 * {
   box-sizing: border-box;
@@ -44,7 +46,7 @@ button {
 }
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.45;
+  opacity: 1;
 }
 button,
 a,
@@ -57,7 +59,7 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 [role='button']:focus-visible {
-  outline: 3px solid #e3ad57;
+  outline: 3px solid #b7791f;
 }
 a {
   color: inherit;
@@ -67,10 +69,7 @@ button svg {
   flex-shrink: 0;
 }
 button {
-  transition:
-    background 0.18s,
-    color 0.18s,
-    box-shadow 0.18s;
+  transition: box-shadow 0.18s;
 }
 h1,
 h2,
@@ -108,11 +107,11 @@ button:focus:not(:focus-visible) {
 }
 .brand small {
   display: block;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 2px;
   margin-top: 7px;
-  color: #718378;
+  color: var(--text-muted);
 }
 .brand-mark {
   width: 43px;
@@ -126,8 +125,8 @@ button:focus:not(:focus-visible) {
 .topbar-copy {
   font-size: 12px;
   letter-spacing: 0.1px;
-  color: #8b978e;
-  border-left: 1px solid #e2e8e0;
+  color: var(--text-muted);
+  border-left: 1px solid var(--ui-border);
   padding-left: 25px;
   margin-left: 8px;
 }
@@ -138,7 +137,7 @@ button:focus:not(:focus-visible) {
   align-items: center;
   padding: 11px 15px;
   background: #f2f6ef;
-  border: 1px solid #e2e9de;
+  border: 1px solid var(--ui-border);
   border-radius: 9px;
   color: #39604f;
   font-size: 12px;
@@ -174,8 +173,8 @@ button:focus:not(:focus-visible) {
   display: flex;
   align-items: center;
   gap: 7px;
-  color: #7f9385;
-  font-size: 9px;
+  color: var(--text-muted);
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 1.7px;
 }
@@ -183,7 +182,7 @@ button:focus:not(:focus-visible) {
   height: 5px;
   width: 5px;
   border-radius: 50%;
-  background: #c4944e;
+  background: #86703f;
 }
 .sidebar-heading h1 {
   margin-top: 14px;
@@ -195,21 +194,21 @@ button:focus:not(:focus-visible) {
   z-index: 1;
 }
 .sidebar-heading h1 > span {
-  color: #b28e4f;
+  color: #86703f;
 }
 .sidebar-heading p {
   margin-top: 12px;
   font-size: 11px;
-  color: #849086;
+  color: var(--text-muted);
 }
 .heading-train {
   position: absolute;
   right: 13px;
   top: 62px;
   transform: rotate(-13deg);
-  color: #eaf0e5;
+  color: #5f6f64;
   stroke-width: 1;
-  opacity: 0.8;
+  opacity: 1;
 }
 .tabs {
   display: flex;
@@ -227,9 +226,11 @@ button:focus:not(:focus-visible) {
   flex: 1;
   padding: 10px 3px;
   border-radius: 7px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
-  color: #889387;
+  color: var(--text-muted);
+  min-width: 0;
+  white-space: nowrap;
 }
 .tabs button.active {
   background: #fff;
@@ -249,16 +250,18 @@ button:focus:not(:focus-visible) {
   margin: 0 26px;
   gap: 10px;
   background: #f8faf6;
-  border: 1px solid #dce5d8;
+  border: 1px solid var(--ui-border);
   border-radius: 10px;
   padding: 0 13px;
   height: 47px;
-  color: #859784;
+  color: #5f6f64;
   flex-shrink: 0;
 }
 .search-wrap:focus-within {
-  border-color: #749989;
+  border-color: #176957;
   box-shadow: 0 0 0 3px #1769570b;
+  outline: 3px solid #b7791f;
+  outline-offset: 4px;
 }
 .search-wrap input {
   min-width: 0;
@@ -266,12 +269,12 @@ button:focus:not(:focus-visible) {
   border: 0;
   outline: none;
   background: none;
-  font-size: 11px;
+  font-size: 13px;
   height: 100%;
   color: #284e3e;
 }
 .search-wrap input::placeholder {
-  color: #a1aa9d;
+  color: var(--text-muted);
 }
 .search-wrap button {
   padding: 4px;
@@ -287,11 +290,12 @@ button:focus:not(:focus-visible) {
 }
 .region-chips button {
   white-space: nowrap;
-  padding: 7px 11px;
-  border: 1px solid #e7ebe3;
+  padding: 10px 14px;
+  border: 1px solid var(--ui-border);
   border-radius: 7px;
-  font-size: 10px;
-  color: #869183;
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 .region-chips button:hover {
   background: #f3f7ef;
@@ -309,25 +313,25 @@ button:focus:not(:focus-visible) {
   flex-shrink: 0;
 }
 .results-heading h2 {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: -0.3px;
 }
 .results-heading h2 span {
   font-size: 11px;
   margin-left: 3px;
-  color: #a18a5c;
+  color: #86703f;
 }
 .favorites-filter {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
-  color: #8d988b;
+  font-size: 12px;
+  color: var(--text-muted);
   padding: 3px 0;
 }
 .favorites-filter.active {
-  color: #a77b32;
+  color: #86703f;
 }
 .favorites-filter.active svg {
   fill: #efdfa6;
@@ -343,16 +347,19 @@ button:focus:not(:focus-visible) {
 .station-card {
   position: relative;
   border: 1px solid transparent;
-  border-bottom-color: #f0f2ed;
+  border-bottom-color: var(--ui-border);
   border-radius: 10px;
   margin-bottom: 2px;
   background: #fff;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: center;
 }
 .station-card:hover {
   background: #f8faf5;
 }
 .station-card.selected {
-  border-color: #d3e0cd;
+  border-color: #176957;
   background: #f3f7ee;
 }
 .station-main {
@@ -360,29 +367,30 @@ button:focus:not(:focus-visible) {
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 17px 13px;
+  padding: 12px 13px;
   text-align: left;
-  min-height: 102px;
+  min-height: 76px;
 }
 .station-symbol {
   width: 44px;
   height: 44px;
   border-radius: 12px;
   background: #f1f4ee;
-  color: #91a18b;
+  color: #5f6f64;
   display: grid;
   place-items: center;
   flex-shrink: 0;
 }
 .selected .station-symbol {
   background: #e3edda;
-  color: #63805c;
+  color: #5f6f64;
 }
 .station-copy {
   display: flex;
   flex-direction: column;
   gap: 5px;
   min-width: 0;
+  flex: 1;
 }
 .station-copy > strong {
   font-size: 16px;
@@ -395,8 +403,8 @@ button:focus:not(:focus-visible) {
   margin-left: 3px;
 }
 .station-copy > small {
-  font-size: 10px;
-  color: #94a08e;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 .line-tags {
   display: flex;
@@ -408,37 +416,44 @@ button:focus:not(:focus-visible) {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 8px;
-  color: #778773;
+  font-size: 11px;
+  color: #4f6249;
   white-space: nowrap;
 }
 .line-tags i {
   width: 4px;
   height: 4px;
   border-radius: 50%;
+  box-shadow: 0 0 0 1px #5f6f64;
+  flex-shrink: 0;
 }
 .station-chevron {
   margin-left: auto;
-  margin-top: 35px;
-  color: #8a9a81;
+  color: #5f6f64;
+  align-self: center;
+  flex-shrink: 0;
 }
 .favorite-button {
-  padding: 5px;
-  color: #bcc5b6;
+  padding: 11px;
+  color: #7d8d75;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 7px;
 }
 .station-card > .favorite-button {
-  position: absolute;
-  right: 12px;
-  top: 13px;
+  position: static;
+  justify-self: center;
+  align-self: center;
 }
 .favorite-button:hover {
-  color: #bb9747;
+  color: #86703f;
 }
 .favorite-button.saved {
   color: #bd9849;
+  background: #263f35;
 }
 .favorite-button.saved svg {
   fill: #f1dfa3;
@@ -450,8 +465,8 @@ button:focus:not(:focus-visible) {
   justify-content: space-between;
   padding: 14px 24px;
   border-top: 1px solid var(--border);
-  font-size: 9px;
-  color: #a2ac9c;
+  font-size: 11px;
+  color: var(--text-muted);
   flex-shrink: 0;
   background: #fdfefb;
 }
@@ -459,22 +474,22 @@ button:focus:not(:focus-visible) {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #85987f;
+  color: #4f6249;
 }
 .status-dot {
   display: inline-block;
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #789c70;
+  background: #5f6f64;
 }
 .empty-state {
   text-align: center;
   padding: 42px 18px;
-  color: #8fa08b;
+  color: var(--text-muted);
 }
 .empty-state > svg {
-  color: #bdc9b5;
+  color: #5f6f64;
   margin-bottom: 14px;
 }
 .empty-state h3 {
@@ -518,13 +533,13 @@ button:focus:not(:focus-visible) {
   transition: transform 0.3s;
 }
 .region-labels text {
-  fill: #a8b6a2;
+  fill: #5f6f64;
   font-size: 14px;
   letter-spacing: 5px;
   font-weight: 500;
 }
 .region-labels .sea-label {
-  fill: #a6c2c0;
+  fill: #4f6864;
   letter-spacing: 7px;
   font-size: 12px;
 }
@@ -575,11 +590,11 @@ button:focus:not(:focus-visible) {
   flex-wrap: wrap;
   gap: 8px;
   padding: 8px 11px;
-  border: 1px solid #dfe5d6;
+  border: 1px solid var(--ui-border);
   border-radius: 7px;
   background: #fffef5ed;
-  color: #617451;
-  font-size: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
 }
 .map-endpoint-summary span {
   display: flex;
@@ -591,26 +606,31 @@ button:focus:not(:focus-visible) {
 }
 .map-endpoint-summary small {
   color: #936a2b;
-  font-size: 9px;
+  font-size: 11px;
 }
 .map-tag {
   display: flex;
   align-items: center;
   gap: 7px;
   padding: 10px 13px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: -0.2px;
   background: #fffef5ed;
-  border: 1px solid #dfe5d6;
+  border: 1px solid var(--ui-border);
   border-radius: 7px;
-  color: #617451;
+  color: #4f6249;
   box-shadow: 0 2px 5px #45543a05;
 }
 .map-count {
-  color: #8d9d88;
-  font-size: 10px;
+  color: #4f6249;
+  font-size: 11px;
   letter-spacing: 0.3px;
+  background: #fffef5ed;
+  border: 1px solid #dfe5d6;
+  border-radius: 7px;
+  padding: 6px 10px;
+  box-shadow: 0 0 0 1px var(--ui-border);
 }
 .map-controls {
   position: absolute;
@@ -619,7 +639,7 @@ button:focus:not(:focus-visible) {
   display: flex;
   flex-direction: column;
   background: #fffef9;
-  border: 1px solid #dfe5d9;
+  border: 1px solid var(--ui-border);
   border-radius: 9px;
   overflow: hidden;
   box-shadow: 0 3px 12px #3f56380a;
@@ -630,10 +650,10 @@ button:focus:not(:focus-visible) {
   place-items: center;
   width: 37px;
   height: 38px;
-  color: #6f8065;
+  color: var(--text-muted);
 }
 .map-controls button + button {
-  border-top: 1px solid #e9ece3;
+  border-top: 1px solid var(--ui-border);
 }
 .map-controls button:hover {
   background: #eff4e8;
@@ -652,7 +672,7 @@ button:focus:not(:focus-visible) {
   background: #fffdf2e8;
   backdrop-filter: blur(6px);
   padding: 12px 18px;
-  border: 1px solid #e2e6d8;
+  border: 1px solid var(--ui-border);
   border-radius: 8px;
   z-index: 2;
 }
@@ -660,8 +680,8 @@ button:focus:not(:focus-visible) {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 9px;
-  color: #6d7a5f;
+  font-size: 11px;
+  color: var(--text-muted);
 }
 .map-legend i {
   width: 15px;
@@ -673,9 +693,16 @@ button:focus:not(:focus-visible) {
   bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 9px;
-  color: #8f9e8a;
-  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: normal;
+  background: #fffef9;
+  border: 1px solid var(--ui-border);
+  border-radius: 5px;
+  padding: 4px 8px;
+  max-width: calc(100% - 30px);
+  width: max-content;
+  text-align: center;
 }
 .selected-station-panel {
   display: flex;
@@ -688,7 +715,7 @@ button:focus:not(:focus-visible) {
   width: 274px;
   padding: 17px 18px 16px;
   background: #fffffcf5;
-  border: 1px solid #e1e7d9;
+  border: 1px solid var(--ui-border);
   border-radius: 14px;
   box-shadow: 0 8px 28px #42543e12;
   backdrop-filter: blur(8px);
@@ -701,14 +728,14 @@ button:focus:not(:focus-visible) {
   margin-bottom: 14px;
 }
 .selection-top .eyebrow {
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 1.5px;
-  color: #9ca38a;
+  color: var(--text-muted);
 }
 .selection-top > button {
   display: flex;
   padding: 2px;
-  color: #a1ac97;
+  color: #5f6f64;
 }
 .selection-title {
   display: flex;
@@ -720,7 +747,7 @@ button:focus:not(:focus-visible) {
   height: 43px;
   border-radius: 11px;
   background: #edf2e5;
-  color: #718764;
+  color: #5f6f64;
   display: grid;
   place-items: center;
 }
@@ -737,20 +764,25 @@ button:focus:not(:focus-visible) {
   display: flex;
   gap: 4px;
   align-items: center;
-  font-size: 9px;
-  color: #99a58f;
+  font-size: 11px;
+  color: var(--text-muted);
   margin-top: 4px;
 }
 .selection-title > .favorite-button {
   margin-left: auto;
+  padding: 11px;
+  color: var(--text-muted);
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 7px;
 }
 .station-description {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
-  font-size: 10px;
-  color: #8d9a82;
+  font-size: 11px;
+  color: var(--text-muted);
   margin-top: 14px;
   letter-spacing: -0.2px;
   line-height: 1.8;
@@ -771,7 +803,7 @@ button:focus:not(:focus-visible) {
 }
 .description-toggle {
   color: var(--green);
-  font-size: 10px;
+  font-size: 11px;
   padding: 7px 0 0;
 }
 .load-more-stations {
@@ -791,6 +823,8 @@ button:focus:not(:focus-visible) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 .selection-actions {
   display: flex;
@@ -804,11 +838,11 @@ button:focus:not(:focus-visible) {
   justify-content: center;
   gap: 7px;
   padding: 10px 3px;
-  font-size: 10px;
+  font-size: 11px;
   background: #f0f4e9;
-  border: 1px solid #e3e9d9;
+  border: 1px solid var(--ui-border);
   border-radius: 7px;
-  color: #6e815c;
+  color: var(--text-muted);
   font-weight: 500;
 }
 .selection-actions button:last-child {
@@ -824,6 +858,7 @@ button:focus:not(:focus-visible) {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
 }
 .sidebar.planning .sidebar-heading {
   display: none;
@@ -852,7 +887,7 @@ button:focus:not(:focus-visible) {
   flex: 1;
   padding: 9px 5px;
   border-radius: 6px;
-  color: #73836b;
+  color: var(--text-muted);
   font-size: 11px;
 }
 .journey-preference button[aria-pressed='true'] {
@@ -862,9 +897,9 @@ button:focus:not(:focus-visible) {
   box-shadow: 0 1px 4px #36532d12;
 }
 .preference-hint {
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.5;
-  color: #7b8b71;
+  color: var(--text-muted);
   margin: 7px 0;
 }
 .booking-links {
@@ -881,18 +916,18 @@ button:focus:not(:focus-visible) {
   align-items: center;
   gap: 6px;
   background: #eef4e7;
-  border: 1px solid #d9e4ce;
+  border: 1px solid var(--ui-border);
   border-radius: 7px;
   padding: 9px 6px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--green);
   font-weight: 600;
 }
 .booking-links p {
   margin: 7px 0 0;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.6;
-  color: #7f8d75;
+  color: var(--text-muted);
 }
 .discovery-panel {
   overflow-y: auto;
@@ -908,8 +943,8 @@ button:focus:not(:focus-visible) {
   letter-spacing: -1px;
 }
 .discovery-heading p {
-  color: #7d8c73;
-  font-size: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
   line-height: 1.6;
   margin: 0;
 }
@@ -927,10 +962,10 @@ button:focus:not(:focus-visible) {
   display: flex;
   flex-direction: column;
   gap: 7px;
-  font-size: 10px;
-  color: #74866b;
+  font-size: 11px;
+  color: var(--text-muted);
   background: #f6f9f2;
-  border: 1px solid #dce5d5;
+  border: 1px solid var(--ui-border);
   border-radius: 8px;
   padding: 10px;
 }
@@ -959,8 +994,8 @@ button:focus:not(:focus-visible) {
 }
 .roundtrip-toggle span {
   grid-column: 2;
-  color: #87947c;
-  font-size: 9px;
+  color: var(--text-muted);
+  font-size: 11px;
 }
 .discovery-results {
   padding: 0 27px 20px;
@@ -969,11 +1004,11 @@ button:focus:not(:focus-visible) {
 .discovery-result-count {
   font-size: 11px;
   line-height: 1.8;
-  color: #7c8d70;
+  color: var(--text-muted);
   margin: 8px 0 15px;
 }
 .destination-card {
-  border: 1px solid #dfe7d7;
+  border: 1px solid var(--ui-border);
   background: #fbfcf8;
   padding: 14px;
   border-radius: 11px;
@@ -989,15 +1024,15 @@ button:focus:not(:focus-visible) {
   margin: 0;
 }
 .destination-title > span {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--green);
   padding: 4px 7px;
   background: #ebf2e1;
   border-radius: 5px;
 }
 .destination-card p {
-  color: #7a8c6b;
-  font-size: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
   line-height: 1.6;
   margin: 8px 0;
 }
@@ -1006,9 +1041,9 @@ button:focus:not(:focus-visible) {
   color: #31533f;
 }
 .destination-times small {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 400;
-  color: #7a8a70;
+  color: var(--text-muted);
 }
 .destination-actions {
   display: flex;
@@ -1021,11 +1056,11 @@ button:focus:not(:focus-visible) {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid #d9e3ce;
+  border: 1px solid var(--ui-border);
   border-radius: 7px;
   padding: 8px 5px;
   color: #557147;
-  font-size: 10px;
+  font-size: 11px;
 }
 .destination-actions button:first-child {
   color: white;
@@ -1034,7 +1069,7 @@ button:focus:not(:focus-visible) {
 }
 @media (max-width: 760px) {
   .tabs button {
-    font-size: 10px;
+    font-size: 13px;
     gap: 5px;
   }
   .discovery-heading {
@@ -1055,8 +1090,8 @@ button:focus:not(:focus-visible) {
   }
 }
 .timetable-date {
-  font-size: 10px;
-  color: #64775b;
+  font-size: 11px;
+  color: var(--text-muted);
   line-height: 1.6;
   margin: 10px 0;
 }
@@ -1072,7 +1107,7 @@ button:focus:not(:focus-visible) {
   flex-direction: column;
   align-items: flex-start;
   gap: 7px;
-  font-size: 9px;
+  font-size: 11px;
 }
 .route-time-fields input {
   width: 100%;
@@ -1089,7 +1124,7 @@ button:focus:not(:focus-visible) {
   font-size: 12px;
 }
 .journey-summary strong {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--green);
   background: #edf3e5;
   padding: 4px 7px;
@@ -1099,15 +1134,15 @@ button:focus:not(:focus-visible) {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 10px;
-  color: #718367;
+  font-size: 11px;
+  color: var(--text-muted);
   padding-bottom: 18px;
 }
 .journey-picker select {
   max-width: 100%;
   padding: 9px 7px;
   font-size: 11px;
-  border: 1px solid #dce5d5;
+  border: 1px solid var(--ui-border);
   color: #385533;
   border-radius: 7px;
   background: #f9fbf5;
@@ -1119,7 +1154,7 @@ button:focus:not(:focus-visible) {
   line-height: 1.5;
 }
 .connection-stops .unmapped-stop {
-  color: #937844;
+  color: var(--text-muted);
 }
 .edit-journey-button {
   display: none;
@@ -1131,7 +1166,7 @@ button:focus:not(:focus-visible) {
   .edit-journey-button {
     display: inline-flex;
     margin-top: 10px;
-    font-size: 10px;
+    font-size: 11px;
     color: var(--green);
     padding: 4px 0;
   }
@@ -1144,7 +1179,7 @@ button:focus:not(:focus-visible) {
   align-items: center;
   gap: 19px;
   padding: 12px 13px;
-  border: 1px solid #dfe6d9;
+  border: 1px solid var(--ui-border);
   background: #f9fbf6;
   border-radius: 9px;
 }
@@ -1153,18 +1188,18 @@ button:focus:not(:focus-visible) {
   gap: 7px;
   align-items: center;
   white-space: nowrap;
-  font-size: 10px;
-  color: #8a9b7c;
+  font-size: 11px;
+  color: var(--text-muted);
 }
 .endpoint-dot {
   width: 6px;
   height: 6px;
-  border: 2px solid #5a8660;
+  border: 2px solid var(--ui-border);
   border-radius: 50%;
 }
 .endpoint-dot.arrival {
-  border-color: #c39b55;
-  background: #c39b55;
+  border-color: #86703f;
+  background: #86703f;
 }
 .route-form select {
   background: transparent;
@@ -1185,12 +1220,12 @@ button:focus:not(:focus-visible) {
 }
 .route-divider > span {
   width: 26px;
-  border-top: 1px dashed #dce4d4;
+  border-top: 1px dashed var(--ui-border);
 }
 .route-divider > button {
   display: grid;
   place-items: center;
-  color: #9aa98c;
+  color: #5f6f64;
   transform: rotate(90deg);
   padding: 2px;
 }
@@ -1211,10 +1246,15 @@ button:focus:not(:focus-visible) {
 .primary-button:hover:not(:disabled) {
   background: #105c49;
 }
+.primary-button:disabled {
+  color: var(--text-muted);
+  background: #edf2e9;
+  box-shadow: inset 0 0 0 1px var(--ui-border);
+}
 .route-results {
-  flex: 1;
+  flex: 1 0 auto;
   min-height: 0;
-  overflow: auto;
+  overflow: visible;
   padding: 20px 29px;
   scrollbar-width: thin;
 }
@@ -1229,7 +1269,7 @@ button:focus:not(:focus-visible) {
   display: grid;
   place-items: center;
   background: #f1f5e9;
-  color: #9bad87;
+  color: #5f6f64;
   margin: 0 auto 20px;
 }
 .route-intro h2 {
@@ -1240,18 +1280,18 @@ button:focus:not(:focus-visible) {
 .route-intro p {
   font-size: 11px;
   line-height: 1.9;
-  color: #a3af96;
+  color: var(--text-muted);
   margin-top: 10px;
 }
 .route-note {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.8;
-  color: #9ca68f;
+  color: var(--text-muted);
   background: #f8faf4;
-  border: 1px solid #ebeee3;
+  border: 1px solid var(--ui-border);
   border-radius: 8px;
   padding: 11px 12px;
   margin: 0 26px 17px;
@@ -1265,7 +1305,7 @@ button:focus:not(:focus-visible) {
   padding: 3px 0 23px;
 }
 .connection-heading .eyebrow {
-  font-size: 8px;
+  font-size: 11px;
 }
 .connection-heading h2 {
   display: flex;
@@ -1277,11 +1317,11 @@ button:focus:not(:focus-visible) {
   margin: 9px 0;
 }
 .connection-heading h2 > svg {
-  color: #b2bd9e;
+  color: #5f6f64;
 }
 .connection-heading p {
-  font-size: 10px;
-  color: #98a38c;
+  font-size: 11px;
+  color: var(--text-muted);
 }
 .connection-stops {
   padding: 0;
@@ -1330,8 +1370,8 @@ button:focus:not(:focus-visible) {
   font-weight: 600;
 }
 .connection-stops small {
-  font-size: 9px;
-  color: #99a58c;
+  font-size: 11px;
+  color: var(--text-muted);
 }
 .connection-stops .route-train-label {
   color: var(--route-color);
@@ -1350,15 +1390,15 @@ button:focus:not(:focus-visible) {
 }
 .stop-label {
   margin-left: auto;
-  font-size: 9px;
-  color: #799166;
+  font-size: 11px;
+  color: var(--text-muted);
   border-radius: 5px;
   background: #edf3e5;
   padding: 4px 7px;
 }
 .form-hint {
-  font-size: 10px;
-  color: #a08e5d;
+  font-size: 11px;
+  color: var(--text-muted);
   margin-top: 9px;
 }
 .sheet-handle,
@@ -1377,20 +1417,20 @@ button:focus:not(:focus-visible) {
 .live-station {
   white-space: nowrap;
   font:
-    600 11px 'Noto Sans KR',
+    600 12px 'Noto Sans KR',
     sans-serif;
-  border: 1.5px solid var(--route-color, #83a78e);
+  border: 2px solid var(--route-color, #176957);
   border-radius: 16px;
-  background: #fffef9;
+  background: #fff;
   padding: 5px 9px;
   box-shadow: 0 2px 5px #2e503516;
   cursor: pointer;
-  color: var(--route-color, #477350);
+  color: var(--route-color, #175c46);
 }
 .live-station.selected {
   background: var(--route-color, #176957);
   color: white;
-  border-color: #fff;
+  border-color: var(--route-color, #176957);
   box-shadow: 0 2px 9px #17695745;
 }
 .live-station.route-change {
@@ -1404,7 +1444,7 @@ button:focus:not(:focus-visible) {
 }
 @media (max-width: 760px) {
   .map-endpoint-summary {
-    font-size: 9px;
+    font-size: 11px;
     gap: 6px;
     padding: 7px 9px;
   }
@@ -1428,8 +1468,8 @@ button:focus:not(:focus-visible) {
     font-size: 32px;
   }
   .station-main {
-    padding-top: 20px;
-    padding-bottom: 20px;
+    padding-top: 12px;
+    padding-bottom: 12px;
   }
   .selected-station-panel {
     left: 35px;
@@ -1456,9 +1496,9 @@ button:focus:not(:focus-visible) {
     margin-bottom: 17px;
   }
   .station-main {
-    min-height: 92px;
-    padding-top: 13px;
-    padding-bottom: 13px;
+    min-height: 76px;
+    padding-top: 12px;
+    padding-bottom: 12px;
   }
   .route-intro {
     padding: 15px 0;
@@ -1492,8 +1532,9 @@ button:focus:not(:focus-visible) {
     gap: 4px;
   }
   .region-chips button {
-    padding-left: 9px;
-    padding-right: 9px;
+    padding-left: 14px;
+    padding-right: 14px;
+    font-size: 12px;
   }
   .selected-station-panel {
     width: 235px;
@@ -1504,19 +1545,20 @@ button:focus:not(:focus-visible) {
   }
   .map-count {
     display: none;
+    font-size: 11px;
   }
   .map-legend {
     gap: 10px;
     padding: 10px;
   }
   .map-legend > span {
-    font-size: 8px;
+    font-size: 11px;
   }
   .map-legend i {
     width: 11px;
   }
   .topbar-copy {
-    font-size: 10px;
+    font-size: 11px;
   }
 }
 @media (max-width: 760px) {
@@ -1543,7 +1585,7 @@ button:focus:not(:focus-visible) {
     height: 23px;
   }
   .brand small {
-    font-size: 6px;
+    font-size: 11px;
     letter-spacing: 1.6px;
     margin-top: 5px;
   }
@@ -1551,7 +1593,7 @@ button:focus:not(:focus-visible) {
     display: none;
   }
   .header-action {
-    font-size: 10px;
+    font-size: 11px;
     padding: 9px 10px;
     gap: 6px;
   }
@@ -1592,7 +1634,7 @@ button:focus:not(:focus-visible) {
   .sheet-handle > span {
     height: 4px;
     width: 34px;
-    background: #d5ddcf;
+    background: #7d8d75;
     border-radius: 5px;
   }
   .sidebar-heading {
@@ -1604,7 +1646,7 @@ button:focus:not(:focus-visible) {
   }
   .tabs button {
     padding: 8px;
-    font-size: 11px;
+    font-size: 13px;
     gap: 6px;
   }
   .search-wrap {
@@ -1612,28 +1654,28 @@ button:focus:not(:focus-visible) {
     margin: 0 20px;
   }
   .search-wrap input {
-    font-size: 11px;
+    font-size: 13px;
   }
   .region-chips {
     padding: 12px 20px;
     gap: 7px;
   }
   .region-chips button {
-    font-size: 10px;
-    padding: 5px 12px;
+    font-size: 12px;
+    padding: 9px 14px;
   }
   .results-heading {
     padding: 0 21px 8px;
   }
   .results-heading h2 {
-    font-size: 10px;
+    font-size: 12px;
   }
   .station-list {
     padding: 0 13px 12px;
   }
   .station-main {
-    min-height: 82px;
-    padding: 11px;
+    min-height: 72px;
+    padding: 12px 13px;
     gap: 11px;
   }
   .station-symbol {
@@ -1648,21 +1690,17 @@ button:focus:not(:focus-visible) {
     font-size: 14px;
   }
   .station-copy > small {
-    font-size: 9px;
+    font-size: 12px;
   }
   .line-tags {
     margin-top: 1px;
   }
   .line-tags > span {
-    font-size: 8px;
-  }
-  .station-card > .favorite-button {
-    right: 10px;
-    top: 9px;
+    font-size: 11px;
   }
   .sidebar-footer {
     padding: 9px 19px max(9px, env(safe-area-inset-bottom));
-    font-size: 8px;
+    font-size: 11px;
   }
   .map-area {
     position: absolute;
@@ -1684,12 +1722,12 @@ button:focus:not(:focus-visible) {
     gap: 8px;
   }
   .map-tag {
-    font-size: 9px;
+    font-size: 11px;
     padding: 8px 10px;
     border-radius: 6px;
   }
   .map-count {
-    font-size: 8px;
+    font-size: 11px;
   }
   .map-controls {
     right: 14px;
@@ -1711,7 +1749,7 @@ button:focus:not(:focus-visible) {
     border-radius: 6px;
   }
   .map-legend > span {
-    font-size: 8px;
+    font-size: 11px;
     gap: 4px;
   }
   .map-legend i {
@@ -1720,7 +1758,7 @@ button:focus:not(:focus-visible) {
   }
   .map-caption {
     bottom: 22px;
-    font-size: 7px;
+    font-size: 11px;
   }
   .selected-station-panel {
     display: none;
@@ -1734,7 +1772,7 @@ button:focus:not(:focus-visible) {
     align-items: center;
     gap: 7px;
     background: #fffffaf5;
-    border: 1px solid #dce5d3;
+    border: 1px solid var(--ui-border);
     padding: 9px 10px;
     border-radius: 9px;
     box-shadow: 0 3px 9px #425b3710;
@@ -1750,18 +1788,18 @@ button:focus:not(:focus-visible) {
     font-size: 12px;
   }
   .mobile-selection small {
-    font-size: 8px;
-    color: #9ba88d;
+    font-size: 11px;
+    color: var(--text-muted);
   }
   .mobile-selection button {
     display: flex;
     gap: 3px;
     align-items: center;
-    font-size: 9px;
+    font-size: 11px;
     padding: 7px 8px;
     background: #f0f5e6;
     border-radius: 5px;
-    color: #6c8753;
+    color: var(--text-muted);
     white-space: nowrap;
   }
   .mobile-selection button:last-child {
@@ -1775,7 +1813,7 @@ button:focus:not(:focus-visible) {
     padding: 9px 11px;
   }
   .route-form label > span {
-    font-size: 9px;
+    font-size: 11px;
   }
   .route-form select {
     font-size: 12px;
@@ -1806,12 +1844,12 @@ button:focus:not(:focus-visible) {
     font-size: 12px;
   }
   .route-intro p {
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.7;
     margin-top: 7px;
   }
   .route-note {
-    font-size: 8px;
+    font-size: 11px;
     line-height: 1.7;
     padding: 8px 9px;
     margin: 0 20px 10px;
@@ -1836,7 +1874,7 @@ button:focus:not(:focus-visible) {
     font-size: 12px;
   }
   .empty-state p {
-    font-size: 10px;
+    font-size: 11px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1847,4 +1885,11 @@ button:focus:not(:focus-visible) {
     transition: none !important;
     animation: none !important;
   }
+}
+
+.line-tags > .line-overflow-badge {
+  background: #edf3e5;
+  color: #4f6249;
+  border-radius: 5px;
+  padding: 1px 5px;
 }

@@ -420,13 +420,28 @@ export default function App() {
                           <span>역</span>
                         </strong>
                         <small>{station.area}</small>
-                        <span className="line-tags">
-                          {stationLines(station.id).map((line) => (
-                            <span key={line.id}>
-                              <i style={{ background: line.color }} />
-                              {line.name}
+                        <span
+                          className="line-tags"
+                          title={stationLines(station.id)
+                            .map((line) => line.name)
+                            .join(', ')}
+                        >
+                          {stationLines(station.id)
+                            .slice(0, 3)
+                            .map((line) => (
+                              <span key={line.id}>
+                                <i style={{ background: line.color }} />
+                                {line.name}
+                              </span>
+                            ))}
+                          {stationLines(station.id).length > 3 && (
+                            <span
+                              className="line-overflow-badge"
+                              aria-label={`외 ${stationLines(station.id).length - 3}개 노선`}
+                            >
+                              +{stationLines(station.id).length - 3}
                             </span>
-                          ))}
+                          )}
                         </span>
                       </span>
                       <Icon

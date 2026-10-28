@@ -17,6 +17,7 @@
     "data:resolve-locations": "node scripts/resolve-station-locations.mjs"
   },
   "dependencies": {
+    "@fontsource/noto-sans-kr": "5.3.1",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
