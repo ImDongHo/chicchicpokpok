@@ -464,6 +464,7 @@ button:focus:not(:focus-visible) {
 .favorite-button {
   padding: 11px;
   color: #7d8d75;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -478,14 +479,12 @@ button:focus:not(:focus-visible) {
 }
 .favorite-button:hover {
   color: #86703f;
-  background: #f0f4eb;
 }
 .favorite-button.saved {
-  color: #bd9849;
-  background: #263f35;
+  color: #b7791f;
 }
 .favorite-button.saved svg {
-  fill: #f1dfa3;
+  fill: currentColor;
 }
 .sidebar-footer {
   display: flex;
