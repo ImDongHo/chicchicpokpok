@@ -418,7 +418,7 @@ export async function main() {
   // Probe the official timetable/classification source without exposing its key.
   try {
     const url = new URL(
-      'https://apis.data.go.kr/1613000/TrainInfoService/getVhcleKndList',
+      'https://apis.data.go.kr/1613000/TrainInfoService/GetVhcleKndList',
     )
     url.searchParams.set('serviceKey', key)
     url.searchParams.set('_type', 'json')
@@ -449,6 +449,12 @@ export async function main() {
       available: false,
       reason: 'Timetable source request unavailable; credentials omitted.',
     }
+  }
+  if (process.env.GITHUB_ACTIONS === 'true') {
+    const source = coverage.timetableSource
+    console.log(
+      `::notice title=TAGO connectivity::available=${source.available}, HTTP=${source.httpStatus ?? 'unavailable'}, resultCode=${source.resultCode ?? 'unavailable'}`,
+    )
   }
   const root = fileURLToPath(new URL('../', import.meta.url))
   const serviceHash = createHash('sha256')
