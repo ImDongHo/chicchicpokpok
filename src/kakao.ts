@@ -9,7 +9,13 @@ export interface Bounds {
 }
 export interface KakaoMap {
   panTo(point: Coordinate): void
-  setBounds(bounds: Bounds): void
+  setBounds(
+    bounds: Bounds,
+    top?: number,
+    right?: number,
+    bottom?: number,
+    left?: number,
+  ): void
   getLevel(): number
   getBounds(): Bounds
   getCenter(): Coordinate

@@ -96,3 +96,53 @@ test('missing location queries are deduplicated and verified coordinates retain 
   )
   assert.equal(dataset.stations.length, 2)
 })
+
+test('regional station names keep Gyeonggi Pangyo separate from Chungnam Pangyo and accept its rail transit location', () => {
+  const pangyo = {
+    ...document,
+    place_name: '판교역 경강선',
+    category_name: '교통,수송 > 지하철,전철 > 경강선',
+    road_address_name: '경기 성남시 분당구 판교역로 160',
+    x: '127.1112',
+    y: '37.3948',
+  }
+  assert.equal(selectStationPlace('판교(경기)', [pangyo]).status, 'verified')
+  assert.equal(
+    selectStationPlace('판교(충남)', [pangyo]).status,
+    'not-verified',
+  )
+  const needs = missingStationLocations({ stations: [] }, [
+    {
+      stops: [
+        { stationId: 'gyeonggi', name: '판교(경기)' },
+        { stationId: 'chungnam', name: '판교(충남)' },
+      ],
+    },
+  ])
+  assert.deepEqual(
+    needs.map((need) => need.query),
+    ['경기 판교역', '충남 판교역'],
+  )
+})
+
+test('the railway station candidate takes precedence over a different metro station with the same name', () => {
+  const rail = {
+    ...document,
+    place_name: '양평역 중앙선',
+    road_address_name: '경기 양평군 양평읍 역전길 30',
+    x: '127.4915',
+    y: '37.4927',
+  }
+  const metro = {
+    ...document,
+    id: '999',
+    place_name: '양평역 5호선',
+    category_name: '교통,수송 > 지하철,전철 > 5호선',
+    road_address_name: '서울 영등포구 양산로 21',
+    x: '126.8864',
+    y: '37.5254',
+  }
+  const result = selectStationPlace('양평', [metro, rail])
+  assert.equal(result.status, 'verified')
+  assert.equal(result.location?.placeId, rail.id)
+})

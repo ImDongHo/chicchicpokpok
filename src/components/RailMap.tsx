@@ -95,7 +95,8 @@ function fitMap(
     const bounds = new sdk.LatLngBounds()
     for (const station of targets)
       bounds.extend(new sdk.LatLng(station.lat, station.lng))
-    map.setBounds(bounds)
+    // Keep endpoint markers clear of the route heading, zoom buttons and legend.
+    map.setBounds(bounds, 105, 100, 115, 75)
   }
 }
 
