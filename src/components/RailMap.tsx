@@ -308,6 +308,7 @@ export function RailMap({
           strokeWeight: 5,
           strokeColor: segment.color,
           strokeOpacity: 0.95,
+          strokeStyle: 'shortdash',
         }),
     )
     return () => {
@@ -436,6 +437,7 @@ export function RailMap({
                 fill="none"
                 stroke={segment.color}
                 strokeWidth="6"
+                strokeDasharray="8 6"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
@@ -539,10 +541,10 @@ export function RailMap({
           </span>
         )}
       </div>
-      {(mode !== 'live' || unknownLocations > 0) && (
+      {(connection || mode !== 'live') && (
         <p className="map-caption">
-          {unknownLocations
-            ? `위치 미확인 정차역 ${unknownLocations}개 · 목록에 모두 표시`
+          {connection
+            ? `정차역 간 직선 연결 · 실제 선로 아님${unknownLocations ? ` · 위치 미확인 ${unknownLocations}개는 목록에 표시` : ''}`
             : mode === 'error'
               ? '실제 지도를 불러오지 못해 미리보기로 표시합니다.'
               : '연결 관계를 단순화한 미리보기 지도'}

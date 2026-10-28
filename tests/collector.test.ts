@@ -277,7 +277,7 @@ test('bad dates, changed schemas, and ambiguous station coordinates stop or excl
     /schema/,
   )
   const ambiguousLocation = transformData(
-    [...stationRows, { ...stationRows[0], 위도좌표: '36.0' }],
+    [...stationRows, { ...stationRows[0], 경도좌표: '127.001' }],
     plans,
     stops,
     date,

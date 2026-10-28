@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
+import { checkStationLocation } from './station-locations.mjs'
 import {
   createTimetableIndex,
   findJourneys,
@@ -24,6 +25,12 @@ async function main() {
     ),
   )
   const index = createTimetableIndex(trips)
+  for (const station of dataset.stations) {
+    assert.ok(
+      checkStationLocation(station.lat, station.lng, station.area).valid,
+      `Mapped station ${station.name} conflicts with its source address`,
+    )
+  }
   const byId = new Map(trips.map((trip) => [trip.id, trip]))
   const date = metadata.dataDate
   let tagoVerifiedServices = 0
@@ -253,6 +260,7 @@ async function main() {
   }
   const report = {
     date,
+    validatedMapLocations: dataset.stations.length,
     tagoVerifiedServices,
     testedServices,
     skippedServices: skipped,

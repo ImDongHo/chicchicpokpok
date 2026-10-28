@@ -3,6 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
 import { collectTago, TagoError } from './tago.mjs'
+import { stationLocation } from './station-locations.mjs'
 
 const stationEndpoint =
   'https://api.odcloud.kr/api/15067652/v1/uddi:29222bc3-1bc1-44bd-9ad6-9210ddb9a6ca'
@@ -169,16 +170,29 @@ export function transformData(stationRows, planRows, stopRows, date) {
   const stationMap = new Map(),
     ambiguous = new Set()
   let invalidCoordinates = 0
+  const locationCorrections = [],
+    rejectedStationLocations = []
   for (const row of stationRows) {
-    const lat = Number(String(row['위도좌표'] ?? '').trim()),
-      lng = Number(String(row['경도좌표'] ?? '').trim())
-    if (!(lat > 33 && lat < 39 && lng > 124 && lng < 132)) {
+    const originalLat = Number(String(row['위도좌표'] ?? '').trim()),
+      originalLng = Number(String(row['경도좌표'] ?? '').trim())
+    const name = row['역이름'].trim().replace(/역$/, ''),
+      normalized = normalize(name),
+      area = String(row['주소'] ?? '').trim()
+    const location = stationLocation(name, originalLat, originalLng, area)
+    if (!location.validation.valid) {
       invalidCoordinates++
+      rejectedStationLocations.push({
+        name,
+        area,
+        lat: originalLat,
+        lng: originalLng,
+        ...location.validation,
+      })
       continue
     }
-    const name = row['역이름'].trim().replace(/역$/, ''),
-      normalized = normalize(name)
-    const area = String(row['주소'] ?? '').trim()
+    const { lat, lng } = location
+    if (location.correction)
+      locationCorrections.push({ name, area, lat, lng, ...location.correction })
     const existing = stationMap.get(normalized)
     if (
       existing &&
@@ -357,6 +371,7 @@ export function transformData(stationRows, planRows, stopRows, date) {
     acceptedTrips: trips.length,
     rejectedTrips,
     invalidCoordinates,
+    correctedStationLocations: locationCorrections.length,
     ambiguousStationNames: ambiguous.size,
     tripsWithUnmappedStops,
   }
@@ -371,6 +386,14 @@ export function transformData(stationRows, planRows, stopRows, date) {
       name: row['역이름'],
       lat: row['위도좌표'],
       lng: row['경도좌표'],
+    })),
+    locationCorrections,
+    rejectedStationLocations,
+    mappedStationLocations: stations.map(({ name, lat, lng, area }) => ({
+      name,
+      lat,
+      lng,
+      area,
     })),
     excludedTrains,
     unmappedTrains,
@@ -429,6 +452,25 @@ export async function main() {
   coverage.timetableSource = { available: true, ...tago.coverage }
   dataset.metadata.tagoMatchedTrips = tago.coverage.matched
   if (process.env.GITHUB_ACTIONS === 'true') {
+    console.log(
+      `::notice title=Station location validation::${dataset.stations.length} address-consistent mapped stations; ${coverage.locationCorrections.length} reviewed corrections; ${coverage.rejectedStationLocations.length} locations omitted.`,
+    )
+    const stationIndex = new Map(
+      dataset.stations.map((station) => [station.id, station]),
+    )
+    const path = trips
+      .find((trip) => trip.trainNumber === '00801')
+      ?.stops.map((stop) => {
+        const station = stationIndex.get(stop.stationId)
+        return {
+          name: stop.name,
+          location: station ? [station.lat, station.lng] : null,
+        }
+      })
+    if (path)
+      console.log(
+        `::notice title=Seoul Gangneung map verification::${JSON.stringify(path)}`,
+      )
     console.log(
       `::notice title=TAGO timetable crosscheck::${date}: ${tago.coverage.matched} exact service matches, ${tago.coverage.unmatched} unmatched, ${tago.coverage.unmapped} station pairs unavailable, ${tago.coverage.requests} requests; rejected schedules=${JSON.stringify(tago.coverage.rejectedSchedules.reasons)}.`,
     )
