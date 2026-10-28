@@ -4,6 +4,22 @@ import { checkStationLocation } from './station-locations.mjs'
 const canonical = (value) =>
   normalizeStationName(value).replace('여수엑스포', '여수expo')
 
+function searchIdentity(value) {
+  const normalized = canonical(value)
+  const region = /^(.*)\((경기|충남|충북|전남|전북|경남|경북|강원)\)$/.exec(
+    normalized,
+  )
+  if (region)
+    return {
+      name: region[1],
+      region: region[2],
+      query: `${region[2]} ${region[1]}역`,
+    }
+  if (normalized === '전남장흥')
+    return { name: '장흥', region: '전남', query: '전남 장흥역' }
+  return { name: normalized, region: '', query: normalized + '역' }
+}
+
 export function missingStationLocations(dataset, trips) {
   const known = new Set(dataset.stations.map((station) => station.id))
   const groups = new Map()
@@ -13,7 +29,7 @@ export function missingStationLocations(dataset, trips) {
       const name = canonical(stop.name)
       if (!groups.has(name))
         groups.set(name, {
-          query: name + '역',
+          query: searchIdentity(stop.name).query,
           name: stop.name,
           ids: new Map(),
         })
@@ -33,28 +49,42 @@ function distanceKm(a, b) {
 }
 
 export function selectStationPlace(name, documents, addressHints = []) {
-  const expected = canonical(name)
-  const candidates = documents.flatMap((document) => {
+  const identity = searchIdentity(name)
+  let candidates = documents.flatMap((document) => {
     if (
       typeof document.place_name !== 'string' ||
       typeof document.category_name !== 'string'
     )
       return []
+    const categories = document.category_name
+      .split('>')
+      .map((part) => part.trim())
+    const train = categories.some((part) => ['기차역', '철도역'].includes(part))
+    const metro = categories.some((part) =>
+      ['지하철,전철', '지하철역', '전철역'].includes(part),
+    )
     if (
-      !document.category_name
-        .split('>')
-        .some((part) => ['기차역', '철도역'].includes(part.trim())) ||
+      !(train || metro) ||
       /폐역|주차장|출구|매표소/.test(document.place_name)
     )
       return []
     const baseName = /^(.*?역)(?:\s|\(|$)/.exec(document.place_name)?.[1]
-    if (!baseName || canonical(baseName) !== expected) return []
+    if (
+      !baseName ||
+      ![identity.name, canonical(name)].includes(canonical(baseName))
+    )
+      return []
     const lat = Number(document.y),
       lng = Number(document.x)
     const area = String(
       document.road_address_name || document.address_name || '',
     ).trim()
     if (!checkStationLocation(lat, lng, area).valid) return []
+    if (
+      identity.region &&
+      !checkStationLocation(lat, lng, identity.region).valid
+    )
+      return []
     if (
       addressHints.length &&
       !addressHints.some(
@@ -71,9 +101,12 @@ export function selectStationPlace(name, documents, addressHints = []) {
         placeId: String(document.id),
         placeName: document.place_name,
         category: document.category_name,
+        train,
       },
     ]
   })
+  if (candidates.some((candidate) => candidate.train))
+    candidates = candidates.filter((candidate) => candidate.train)
   if (!candidates.length) return { status: 'not-verified' }
   if (
     candidates.some((candidate) => distanceKm(candidate, candidates[0]) > 0.5)

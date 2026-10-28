@@ -35,9 +35,9 @@ async function main() {
   )
   const needs = missingStationLocations(dataset, payload.trips)
   if (!needs.length) return
-  if (needs.length > 80)
+  if (needs.length > 200)
     throw new LocationError(
-      'More than 80 station location queries are needed; review the source before proceeding.',
+      `More than 200 station location queries are needed (${needs.length}); review the source before proceeding.`,
     )
   const key = process.env.VITE_KAKAO_MAP_APP_KEY?.trim()
   if (!key)
