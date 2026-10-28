@@ -7,7 +7,12 @@ import {
   createTimetableIndex,
   findJourneys,
   parseKoreaTime,
+  journeyStops,
 } from '../src/lib/timetable.ts'
+import {
+  buildJourneySegments,
+  buildSegmentedMapPaths,
+} from '../src/lib/route-segments.ts'
 
 async function main() {
   const root = fileURLToPath(new URL('../', import.meta.url))
@@ -89,6 +94,8 @@ async function main() {
     new Date(time + 9 * 3600000).toISOString().slice(0, 10).replaceAll('-', '')
   const hourOf = (time) =>
     new Date(time + 9 * 3600000).toISOString().slice(11, 16)
+  const knownMapIds = new Set(dataset.stations.map((station) => station.id))
+  let mapConnectionsChecked = 0
 
   function validateJourney(result, start, end) {
     assert.equal(result.legs[0].stops[0].stationId, start)
@@ -123,6 +130,32 @@ async function main() {
         assert.notEqual(previous.tripId, leg.tripId)
       }
     }
+    const orderedKnown = journeyStops(result)
+      .map((stop) => stop.stationId)
+      .filter((id) => knownMapIds.has(id))
+    const paths = buildSegmentedMapPaths(
+      buildJourneySegments(result, date),
+      knownMapIds,
+    )
+    const edges = new Set(
+      paths.flatMap((path) =>
+        path.stationIds
+          .slice(1)
+          .map((id, i) => JSON.stringify([path.stationIds[i], id])),
+      ),
+    )
+    for (let i = 1; i < orderedKnown.length; i++) {
+      if (orderedKnown[i - 1] === orderedKnown[i]) continue
+      assert.ok(
+        edges.has(JSON.stringify([orderedKnown[i - 1], orderedKnown[i]])),
+        `Map route stopped before ${orderedKnown[i]} because of a missing intermediate location`,
+      )
+    }
+    assert.ok(
+      paths.every((path) => path.stationIds.every((id) => knownMapIds.has(id))),
+      'Map geometry invented a station location',
+    )
+    mapConnectionsChecked++
   }
 
   let testedServices = 0
@@ -261,6 +294,7 @@ async function main() {
   const report = {
     date,
     validatedMapLocations: dataset.stations.length,
+    mapConnectionsChecked,
     tagoVerifiedServices,
     testedServices,
     skippedServices: skipped,
@@ -274,6 +308,7 @@ async function main() {
     limitations: [
       'Validation is against the collected source records, not live seat availability or future schedule changes.',
       'Missing coordinates do not remove intermediate stops from journeys.',
+      'Light dotted links bridge missing intermediate locations without estimating a marker or exact railway geometry.',
     ],
   }
   await writeFile(
@@ -283,6 +318,10 @@ async function main() {
   console.log(
     `Verified ${testedServices}/${trips.length} service stop lists and ${cases.length} representative station pairs; ${skipped.length} services had unverifiable times.`,
   )
+  if (process.env.GITHUB_ACTIONS === 'true')
+    console.log(
+      `::notice title=Map connection validation::${mapConnectionsChecked} journey map connections checked; every consecutive known station remains linked, including gaps at missing intermediate or transfer locations.`,
+    )
 }
 
 main().catch((error) => {

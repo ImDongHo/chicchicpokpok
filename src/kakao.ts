@@ -45,7 +45,7 @@ export interface KakaoMaps {
     strokeWeight: number
     strokeColor: string
     strokeOpacity: number
-    strokeStyle?: 'shortdash'
+    strokeStyle?: 'shortdash' | 'shortdot'
   }) => MapLayer
 }
 

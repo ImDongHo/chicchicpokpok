@@ -43,20 +43,69 @@ export function buildJourneySegments(
   })
 }
 
-// Split geometry at unknown locations rather than inventing station coordinates.
-export function mappedPaths(ids: string[], knownIds: Set<string>): string[][] {
-  const result: string[][] = []
-  let current: string[] = []
+interface MapPath {
+  stationIds: string[]
+  missingStationIds: string[]
+}
+
+// Keep each known run and explicitly mark links over missing intermediate
+// locations. No marker, coordinate or extra service is invented for those stops.
+export function buildMapPaths(ids: string[], knownIds: Set<string>): MapPath[] {
+  const result: MapPath[] = []
+  let current: string[] = [],
+    missing: string[] = []
+  let lastKnown: string | undefined
   for (const id of ids) {
-    if (knownIds.has(id)) current.push(id)
-    else {
-      if (current.length > 1) result.push(current)
+    if (!knownIds.has(id)) {
+      if (current.length > 1)
+        result.push({ stationIds: current, missingStationIds: [] })
       current = []
+      missing.push(id)
+      continue
     }
+    if (missing.length) {
+      if (lastKnown !== undefined && lastKnown !== id)
+        result.push({ stationIds: [lastKnown, id], missingStationIds: missing })
+      missing = []
+    }
+    current.push(id)
+    lastKnown = id
   }
-  if (current.length > 1) result.push(current)
+  if (current.length > 1)
+    result.push({ stationIds: current, missingStationIds: [] })
   return result
 }
+
+export function buildSegmentedMapPaths(
+  segments: ConnectionSegment[],
+  knownIds: Set<string>,
+): (MapPath & { segmentIndex: number | null })[] {
+  const paths: (MapPath & { segmentIndex: number | null })[] = segments.flatMap(
+    (segment, segmentIndex) =>
+      buildMapPaths(segment.stationIds, knownIds).map((path) => ({
+        ...path,
+        segmentIndex,
+      })),
+  )
+  const key = (path: MapPath) =>
+    JSON.stringify([path.stationIds, path.missingStationIds])
+  const covered = new Set(
+    paths.filter((path) => path.missingStationIds.length).map(key),
+  )
+  const whole = segments.flatMap((segment, index) =>
+    index ? segment.stationIds.slice(1) : segment.stationIds,
+  )
+  for (const path of buildMapPaths(whole, knownIds)) {
+    // A transfer without a verified location has no color boundary to place on
+    // the map. Join its nearest known stations in a separate neutral style.
+    if (path.missingStationIds.length && !covered.has(key(path))) {
+      paths.push({ ...path, segmentIndex: null })
+      covered.add(key(path))
+    }
+  }
+  return paths
+}
+
 interface Choice {
   line: RailLine | null
   end: number

@@ -2,8 +2,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   buildConnectionSegments,
+  buildMapPaths,
+  buildSegmentedMapPaths,
   buildJourneySegments,
-  mappedPaths,
 } from '../src/lib/route-segments.ts'
 import { createTimetableIndex, findJourneys } from '../src/lib/timetable.ts'
 import type { RailLine } from '../src/types.ts'
@@ -109,15 +110,36 @@ test('empty or single-station connections draw no route segments', () => {
   assert.deepEqual(buildConnectionSegments([], ['a']), [])
 })
 
-test('unknown coordinates split only map geometry and never bridge missing stops', () => {
-  assert.deepEqual(
-    mappedPaths(['a', 'b', 'unknown', 'c', 'd'], new Set(['a', 'b', 'c', 'd'])),
-    [
-      ['a', 'b'],
-      ['c', 'd'],
-    ],
+test('a missing Pyeongchang location keeps the recorded route connected to Gangneung with an explicitly approximate link', () => {
+  const stops = ['서울', '청량리', '상봉', '만종', '평창', '강릉']
+  const known = new Set(['서울', '청량리', '상봉', '만종', '강릉'])
+  const paths = buildMapPaths(stops, known)
+  assert.deepEqual(paths, [
+    { stationIds: ['서울', '청량리', '상봉', '만종'], missingStationIds: [] },
+    { stationIds: ['만종', '강릉'], missingStationIds: ['평창'] },
+  ])
+  assert.equal(paths.at(-1)?.stationIds.at(-1), '강릉')
+  assert.ok(
+    paths.every((path) => path.stationIds.every((id) => known.has(id))),
+    'Do not invent a coordinate or marker for Pyeongchang',
   )
-  assert.deepEqual(mappedPaths(['a', 'unknown', 'b'], new Set(['a', 'b'])), [])
+  assert.deepEqual(stops, ['서울', '청량리', '상봉', '만종', '평창', '강릉'])
+})
+
+test('several missing locations retain known endpoints without fabricating unknown origins or destinations', () => {
+  const paths = buildMapPaths(
+    ['unknown-origin', 'a', 'x', 'y', 'b', 'c', 'unknown-end'],
+    new Set(['a', 'b', 'c']),
+  )
+  assert.deepEqual(paths, [
+    { stationIds: ['a', 'b'], missingStationIds: ['x', 'y'] },
+    { stationIds: ['b', 'c'], missingStationIds: [] },
+  ])
+  assert.deepEqual(buildMapPaths(['a', 'x'], new Set(['a'])), [])
+  assert.deepEqual(buildMapPaths(['x', 'y'], new Set()), [])
+  assert.deepEqual(buildMapPaths(['a', 'b'], new Set(['a', 'b'])), [
+    { stationIds: ['a', 'b'], missingStationIds: [] },
+  ])
 })
 
 test('verified service legs retain train numbers and distinct colors with the actual transfer wait', () => {
@@ -176,4 +198,28 @@ test('verified service legs retain train numbers and distinct colors with the ac
   assert.equal(segments[1].transferMinutes, 20)
   assert.match(segments[0].label, /KTX 001호/)
   assert.match(segments[1].label, /002호.*차종 미제공/)
+})
+
+test('an unlocated transfer stays connected between known stations without inventing a transfer marker or train color boundary', () => {
+  const segments = buildConnectionSegments(
+    [line('first', ['a', 'transfer']), line('second', ['transfer', 'b'])],
+    ['a', 'transfer', 'b'],
+  )
+  assert.equal(segments.length, 2)
+  assert.deepEqual(buildSegmentedMapPaths(segments, new Set(['a', 'b'])), [
+    {
+      stationIds: ['a', 'b'],
+      missingStationIds: ['transfer'],
+      segmentIndex: null,
+    },
+  ])
+  const knownTransfer = buildSegmentedMapPaths(
+    segments,
+    new Set(['a', 'transfer', 'b']),
+  )
+  assert.deepEqual(
+    knownTransfer.map((path) => path.segmentIndex),
+    [0, 1],
+  )
+  assert.ok(knownTransfer.every((path) => !path.missingStationIds.length))
 })

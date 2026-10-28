@@ -3,7 +3,7 @@ import { stationById } from '../data/railway.ts'
 import type { ConnectionSegment, Station } from '../types.ts'
 import { getMapStations } from '../lib/map-visibility.ts'
 import type { MapViewport } from '../lib/map-visibility.ts'
-import { mappedPaths } from '../lib/route-segments.ts'
+import { buildSegmentedMapPaths } from '../lib/route-segments.ts'
 import { loadKakaoMaps } from '../kakao.ts'
 import type { KakaoMap, KakaoMaps, MapLayer } from '../kakao.ts'
 import { Icon } from './Icon.tsx'
@@ -120,14 +120,22 @@ export function RailMap({
   const [zoom, setZoom] = useState(1)
   const geometry = useMemo(
     () =>
-      segments.flatMap((segment, index) =>
-        mappedPaths(segment.stationIds, knownStationIds).map((ids, part) => ({
-          key: `${index}:${part}`,
-          ids,
-          color: segment.color,
-          label: segment.label,
-        })),
-      ),
+      buildSegmentedMapPaths(segments, knownStationIds).map((path, index) => {
+        const segment =
+          path.segmentIndex === null ? null : segments[path.segmentIndex]
+        return {
+          key: String(index),
+          ids: path.stationIds,
+          approximate: path.missingStationIds.length > 0,
+          transferGap: segment === null,
+          color: segment?.color ?? '#64748b',
+          label:
+            (segment?.label ?? '환승역 위치 미확인 구간') +
+            (path.missingStationIds.length
+              ? ` · 위치 미확인 중간역 ${path.missingStationIds.length}개를 포함한 참고 연결`
+              : ''),
+        }
+      }),
     [segments],
   )
   const unknownLocations =
@@ -305,10 +313,10 @@ export function RailMap({
             const s = stationById.get(id)!
             return new sdk.LatLng(s.lat, s.lng)
           }),
-          strokeWeight: 5,
+          strokeWeight: segment.approximate ? 4 : 5,
           strokeColor: segment.color,
-          strokeOpacity: 0.95,
-          strokeStyle: 'shortdash',
+          strokeOpacity: segment.approximate ? 0.65 : 0.95,
+          strokeStyle: segment.approximate ? 'shortdot' : 'shortdash',
         }),
     )
     return () => {
@@ -436,8 +444,9 @@ export function RailMap({
                   .join(' ')}
                 fill="none"
                 stroke={segment.color}
-                strokeWidth="6"
-                strokeDasharray="8 6"
+                strokeWidth={segment.approximate ? 4 : 6}
+                strokeOpacity={segment.approximate ? 0.65 : 1}
+                strokeDasharray={segment.approximate ? '2 7' : '8 6'}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
@@ -540,11 +549,17 @@ export function RailMap({
               : '역을 선택한 뒤 연결 경로를 살펴보세요'}
           </span>
         )}
+        {geometry.some((path) => path.transferGap) && (
+          <span>
+            <i style={{ background: '#64748b' }} />
+            환승역 위치 미확인 참고 연결
+          </span>
+        )}
       </div>
       {(connection || mode !== 'live') && (
         <p className="map-caption">
           {connection
-            ? `정차역 간 직선 연결 · 실제 선로 아님${unknownLocations ? ` · 위치 미확인 ${unknownLocations}개는 목록에 표시` : ''}`
+            ? `정차역 간 직선 연결 · 실제 선로 아님${unknownLocations ? ` · 옅은 점선: 일부 역 위치 미확인(${unknownLocations}개)` : ''}`
             : mode === 'error'
               ? '실제 지도를 불러오지 못해 미리보기로 표시합니다.'
               : '연결 관계를 단순화한 미리보기 지도'}
