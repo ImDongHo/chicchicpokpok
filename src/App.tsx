@@ -1,4 +1,4 @@
-import { stationLabel } from './lib/station-labels.ts'
+import { compareStationLabels, stationLabel } from './lib/station-labels.ts'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Icon } from './components/Icon.tsx'
@@ -183,11 +183,10 @@ export default function App() {
   )
   const routeStations = useMemo(
     () =>
-      timetable
-        ? [...timetable.stationNames]
-            .map(([id, name]) => ({ id, name }))
-            .sort((a, b) => a.name.localeCompare(b.name, 'ko'))
-        : stations,
+      (timetable
+        ? [...timetable.stationNames].map(([id, name]) => ({ id, name }))
+        : [...stations]
+      ).sort(compareStationLabels),
     [timetable],
   )
   const mapCandidates = useMemo(

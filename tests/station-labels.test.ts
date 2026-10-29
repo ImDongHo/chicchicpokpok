@@ -1,7 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { Station, TrainTrip } from '../src/types.ts'
-import { stationLabel, hasSrStationLabel } from '../src/lib/station-labels.ts'
+import {
+  stationLabel,
+  hasSrStationLabel,
+  compareStationLabels,
+} from '../src/lib/station-labels.ts'
 import {
   hasUnconfirmedOperator,
   trainTypeLabel,
@@ -57,6 +61,63 @@ test('only reviewed station display aliases remove the source prefix', () => {
     assert.equal(stationLabel(name), name)
   assert.equal(hasSrStationLabel('S수서'), true)
   assert.equal(hasSrStationLabel('수서'), false)
+})
+
+test('station dropdown order uses visible Korean names for source-prefixed stations', () => {
+  const source = [
+    '평택',
+    'S수서',
+    '서울',
+    '부산',
+    'S평택지제',
+    'S동탄',
+    '동대구',
+    '대전',
+    '울산',
+  ].map((name) => ({ id: `source:${name}`, name }))
+  const original = structuredClone(source)
+  const sorted = [...source].sort(compareStationLabels)
+  assert.deepEqual(
+    sorted.map((station) => stationLabel(station.name)),
+    [
+      '대전',
+      '동대구',
+      '동탄',
+      '부산',
+      '서울',
+      '수서',
+      '울산',
+      '평택',
+      '평택지제',
+    ],
+  )
+  assert.equal(
+    sorted.find((station) => stationLabel(station.name) === '동탄')!.id,
+    'source:S동탄',
+  )
+  assert.equal(
+    sorted.find((station) => stationLabel(station.name) === '수서')!.name,
+    'S수서',
+  )
+  assert.deepEqual(source, original)
+})
+
+test('identical display names retain distinct source IDs in a deterministic order', () => {
+  const source = [
+    { id: 'b', name: 'S수서' },
+    { id: 'a', name: '수서' },
+  ]
+  assert.deepEqual(
+    [...source].sort(compareStationLabels).map((station) => station.id),
+    ['a', 'b'],
+  )
+  assert.deepEqual(
+    [...source]
+      .reverse()
+      .sort(compareStationLabels)
+      .map((station) => station.id),
+    ['a', 'b'],
+  )
 })
 
 test('station search retains source names and IDs while accepting public station names', () => {

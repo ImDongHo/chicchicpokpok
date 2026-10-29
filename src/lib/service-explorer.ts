@@ -2,7 +2,7 @@ import type { Station, TrainTrip } from '../types.ts'
 import type { TimetableIndex } from './timetable.ts'
 import { matchesTrainFilter } from './train-filter.ts'
 import type { TrainFilter } from './train-filter.ts'
-import { stationLabel } from './station-labels.ts'
+import { compareStationLabels, stationLabel } from './station-labels.ts'
 import { trainTypeKey } from './train-filter.ts'
 import { parseKoreaTime } from './timetable.ts'
 
@@ -133,11 +133,7 @@ export function explorerStations(
     for (const stop of service.trip.stops) names.set(stop.stationId, stop.name)
   return [...names]
     .map(([id, name]) => ({ id, name }))
-    .sort(
-      (a, b) =>
-        stationLabel(a.name).localeCompare(stationLabel(b.name), 'ko') ||
-        a.id.localeCompare(b.id),
-    )
+    .sort(compareStationLabels)
 }
 
 export function scopedMapStations(
